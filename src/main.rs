@@ -140,7 +140,7 @@ pub struct Order {
     pub offset: OffsetFlagType,   // OffsetFlagType offset;
 }
 
-trait Strategy: Send + Sync {
+pub trait Strategy: Send + Sync {
     fn name(&self) -> NameType;
     fn update(&self, tick: &TickData) -> Order;
 }
@@ -181,7 +181,7 @@ impl Strategy for Aberration {
 
 static RUNNING: AtomicBool = AtomicBool::new(true);
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main1() -> Result<(), Box<dyn std::error::Error>> {
     // 1) Install a Ctrl-C handler that flips RUNNING to false
     ctrlc::set_handler(move || {
         // This closure is run in a signal‐handler context; it should be lightweight.
@@ -299,3 +299,144 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+impl SymbolType {
+    /// 等价于 C++ 中的 `hashFutureSymbol`，将前两个字母打包成 u16。
+    /// 如果第一个字符不是 A–Z/a–z，返回 0；
+    /// 否则如果第二个字符也是字母，返回 (c0<<8 | c1)，否则返回 (c0<<8)。
+    pub const fn hash_future_symbol(&self) -> u16 {
+        let c0 = self.0[0];
+        // 如果 c0 不是 A–Z 或 a–z，返回 0
+        if !((c0 >= b'A' && c0 <= b'Z') || (c0 >= b'a' && c0 <= b'z')) {
+            return 0;
+        }
+        let c1 = self.0[1];
+        // 如果 c1 也是字母，就把 c0<<8 | c1
+        if (c1 >= b'A' && c1 <= b'Z') || (c1 >= b'a' && c1 <= b'z') {
+            return (c0 as u16) << 8 | (c1 as u16);
+        }
+        // 否则只返回 c0<<8
+        (c0 as u16) << 8
+    }
+}
+
+pub struct Engine {
+    ctx: zmq::Context,
+    quote_socket: zmq::Socket,
+    push_sockets: Vec<zmq::Socket>,
+    handlers: Vec<thread::JoinHandle<()>>,
+    num_workers: usize,
+}
+
+impl Engine {
+    fn new(quote_url: &str, num_workers: usize) -> Result<Self, Box<dyn std::error::Error>> {
+        let ctx = zmq::Context::new();
+
+        // setup quote socket
+        let quote_socket = ctx.socket(zmq::SUB)?;
+        quote_socket.set_rcvhwm(0)?;
+        quote_socket.connect(quote_url)?;
+
+        Ok(Engine {
+            ctx,
+            quote_socket,
+            push_sockets: Vec::with_capacity(num_workers),
+            handlers: Vec::with_capacity(num_workers),
+            num_workers,
+        })
+    }
+
+    pub fn add_strategy(&mut self, symbol: SymbolType, strategy: Box<dyn Strategy>) {
+        self.quote_socket.set_subscribe(&symbol.0).expect(&format!("subscibe {:?}", symbol));
+    }
+
+    pub fn init(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        for i in 0..self.num_workers {
+            let endpoint = format!("inproc://worker-{}", i);
+            let pusher = self.ctx.socket(zmq::PUSH)?;
+            pusher.bind(&endpoint)?;
+            self.push_sockets.push(pusher);
+
+            let ctx_clone = self.ctx.clone();
+            let handler = thread::spawn(move || {
+                let order_pusher = ctx_clone.socket(zmq::PUSH).expect("failed to create");
+                order_pusher.connect("ipc://@orders").expect("failed to connect");
+                let puller = ctx_clone.socket(zmq::PULL).expect("failed to create");
+                puller.connect(&endpoint).expect("failed to connect");
+                let mut buffer = [0u8; std::mem::size_of::<TickData>()];
+                loop {
+                    match puller.recv_into(&mut buffer, 0) {
+                        Ok(n) if n == buffer.len() => {
+                            // do something
+                            let order = Order {
+                                stg_name: NameType::from("Aberration"),
+                                symbol: SymbolType::from("rb2505"),
+                                timestamp: 1749141737,
+                                volume: 1,
+                                direction: DirectionType::BUY,
+                                offset: OffsetFlagType::OPEN,
+                            };
+                            println!("send: {:?}", &order);
+                            let bytes: &[u8] = unsafe {
+                                let ptr = &order as *const Order as *const u8;
+                                std::slice::from_raw_parts(ptr, mem::size_of::<Order>())
+                            };
+                            // println!("length of orde is {}", bytes.len());
+                            // send won't block as the sndhwm is unlimited
+                            if let Err(e) = order_pusher.send(bytes, 0) {
+                                eprintln!("Error sending on PUSH socket: {:?}", e);
+                                // In a real service, you might retry or back off here.
+                            }
+                        }
+                        // ZMQ returned something else (maybe the socket was closed, or real error).
+                        Err(e) => {
+                            eprintln!("SUB socket error (or closed): {:?}", e);
+                            break;
+                        }
+                        // If we got fewer/more bytes than `size_of::<TickData>()`
+                        Ok(n) => {
+                            eprintln!("Warning: received {} bytes (expected {}); ignoring", n, buffer.len());
+                            // Just keep going. If you prefer to stop, set RUNNING to false here.
+                        }
+                    }
+                }
+            });
+            self.handlers.push(handler);
+        }
+
+        Ok(())
+    }
+
+    pub fn start(&self) {
+        let mut buffer = [0u8; std::mem::size_of::<TickData>()];
+        loop {
+            match self.quote_socket.recv_into(&mut buffer, 0) {
+                Ok(n) if n == buffer.len() => {
+                    let tick: TickData = unsafe {
+                        let ptr = buffer.as_ptr() as *const TickData;
+                        std::ptr::read_unaligned(ptr)
+                    };
+                    let worker_id = (tick.symbol.hash_future_symbol() as usize) % self.num_workers;
+                    // send won't block as the sndhwm is unlimited
+                    if let Err(e) = self.push_sockets[worker_id].send(buffer.as_slice(), 0) {
+                        eprintln!("Error sending on PUSH socket: {:?}", e);
+                        // In a real service, you might retry or back off here.
+                    }
+                }
+                // ZMQ returned something else (maybe the socket was closed, or real error).
+                Err(e) => {
+                    eprintln!("SUB socket error (or closed): {:?}", e);
+                    break;
+                }
+
+                // If we got fewer/more bytes than `size_of::<TickData>()`
+                Ok(n) => {
+                    eprintln!("Warning: received {} bytes (expected {}); ignoring", n, buffer.len());
+                    // Just keep going. If you prefer to stop, set RUNNING to false here.
+                }
+            }
+        }
+    }
+}
+
+fn main() {}
