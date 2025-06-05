@@ -323,7 +323,7 @@ impl SymbolType {
 
 pub struct Engine {
     ctx: zmq::Context,
-    quote_subscriber: zmq::Socket,
+    tick_subscriber: zmq::Socket,
     work_pushers: Vec<zmq::Socket>,
     work_handlers: Vec<thread::JoinHandle<()>>,
     num_workers: usize,
@@ -332,17 +332,17 @@ pub struct Engine {
 }
 
 impl Engine {
-    fn new(quote_url: &str, num_workers: usize) -> Result<Self, Box<dyn std::error::Error>> {
+    fn new(tick_url: &str, num_workers: usize) -> Result<Self, Box<dyn std::error::Error>> {
         let ctx = zmq::Context::new();
 
         // setup quote socket
-        let quote_subscriber = ctx.socket(zmq::SUB)?;
-        quote_subscriber.set_rcvhwm(0)?;
-        quote_subscriber.connect(quote_url)?;
+        let tick_subscriber = ctx.socket(zmq::SUB)?;
+        tick_subscriber.set_rcvhwm(0)?;
+        tick_subscriber.connect(tick_url)?;
 
         Ok(Engine {
             ctx,
-            quote_subscriber,
+            tick_subscriber,
             work_pushers: Vec::with_capacity(num_workers),
             work_handlers: Vec::with_capacity(num_workers),
             num_workers,
@@ -352,19 +352,20 @@ impl Engine {
     }
 
     pub fn add_strategy(&mut self, symbol: SymbolType, strategy: Arc<dyn Strategy>) {
-        self.quote_subscriber.set_subscribe(&symbol.0).expect(&format!("subscibe {:?}", symbol));
+        self.tick_subscriber.set_subscribe(&symbol.0).expect(&format!("subscibe {:?}", symbol));
         self.stg_map.entry(symbol).or_insert_with(Vec::new).push(strategy);
 
         let worker_id = (symbol.hash_future_symbol() as usize) % self.num_workers;
         self.symbol_batches[worker_id].push(symbol);
     }
 
-    pub fn init(&mut self) -> Result<(), Box<dyn std::error::Error + '_>> {
+    pub fn init(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         for worker_id in 0..self.num_workers {
             let endpoint = format!("inproc://worker-{}", worker_id);
-            let quote_pusher = self.ctx.socket(zmq::PUSH)?;
-            quote_pusher.connect(&endpoint)?;
-            self.work_pushers.push(quote_pusher);
+
+            let tick_pusher = self.ctx.socket(zmq::PUSH)?;
+            tick_pusher.connect(&endpoint)?;
+            self.work_pushers.push(tick_pusher);
 
             // let symbols_clone = self.symbol_batches[i].clone();
             let partial_map: HashMap<_, _> = self.symbol_batches[worker_id]
@@ -377,8 +378,8 @@ impl Engine {
 
             let ctx_clone = self.ctx.clone();
             let handler = thread::spawn(move || {
-                let quote_puller = ctx_clone.socket(zmq::PULL).expect("failed to create");
-                quote_puller.bind(&endpoint).expect("failed to bind");
+                let tick_puller = ctx_clone.socket(zmq::PULL).expect("failed to create");
+                tick_puller.bind(&endpoint).expect("failed to bind");
 
                 let order_pusher = ctx_clone.socket(zmq::PUSH).expect("failed to create");
                 order_pusher.connect("ipc://@orders").expect("failed to connect");
@@ -386,7 +387,7 @@ impl Engine {
                 // receive quotes
                 let mut tick_buf = [0u8; std::mem::size_of::<TickData>()];
                 loop {
-                    match quote_puller.recv_into(&mut tick_buf, 0) {
+                    match tick_puller.recv_into(&mut tick_buf, 0) {
                         Ok(n) if n == tick_buf.len() => {
                             let tick: TickData = unsafe {
                                 let ptr = tick_buf.as_ptr() as *const TickData;
@@ -429,7 +430,7 @@ impl Engine {
     pub fn start(&self) {
         let mut tick_buf = [0u8; std::mem::size_of::<TickData>()];
         loop {
-            match self.quote_subscriber.recv_into(&mut tick_buf, 0) {
+            match self.tick_subscriber.recv_into(&mut tick_buf, 0) {
                 Ok(n) if n == tick_buf.len() => {
                     let tick: TickData = unsafe {
                         let ptr = tick_buf.as_ptr() as *const TickData;
