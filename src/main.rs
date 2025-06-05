@@ -2,6 +2,7 @@ use ctrlc;
 use std::array;
 use std::collections::HashMap;
 use std::fmt;
+use std::hash::Hash;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
@@ -322,10 +323,12 @@ impl SymbolType {
 
 pub struct Engine {
     ctx: zmq::Context,
-    quote_socket: zmq::Socket,
-    push_sockets: Vec<zmq::Socket>,
-    handlers: Vec<thread::JoinHandle<()>>,
+    quote_subscriber: zmq::Socket,
+    work_pushers: Vec<zmq::Socket>,
+    work_handlers: Vec<thread::JoinHandle<()>>,
     num_workers: usize,
+    stg_map: HashMap<SymbolType, Vec<Arc<dyn Strategy>>>,
+    symbol_batches: Vec<Vec<SymbolType>>,
 }
 
 impl Engine {
@@ -333,59 +336,76 @@ impl Engine {
         let ctx = zmq::Context::new();
 
         // setup quote socket
-        let quote_socket = ctx.socket(zmq::SUB)?;
-        quote_socket.set_rcvhwm(0)?;
-        quote_socket.connect(quote_url)?;
+        let quote_subscriber = ctx.socket(zmq::SUB)?;
+        quote_subscriber.set_rcvhwm(0)?;
+        quote_subscriber.connect(quote_url)?;
 
         Ok(Engine {
             ctx,
-            quote_socket,
-            push_sockets: Vec::with_capacity(num_workers),
-            handlers: Vec::with_capacity(num_workers),
+            quote_subscriber,
+            work_pushers: Vec::with_capacity(num_workers),
+            work_handlers: Vec::with_capacity(num_workers),
             num_workers,
+            stg_map: HashMap::new(),
+            symbol_batches: vec![Vec::new(); num_workers],
         })
     }
 
-    pub fn add_strategy(&mut self, symbol: SymbolType, strategy: Box<dyn Strategy>) {
-        self.quote_socket.set_subscribe(&symbol.0).expect(&format!("subscibe {:?}", symbol));
+    pub fn add_strategy(&mut self, symbol: SymbolType, strategy: Arc<dyn Strategy>) {
+        self.quote_subscriber.set_subscribe(&symbol.0).expect(&format!("subscibe {:?}", symbol));
+        self.stg_map.entry(symbol).or_insert_with(Vec::new).push(strategy);
+
+        let worker_id = (symbol.hash_future_symbol() as usize) % self.num_workers;
+        self.symbol_batches[worker_id].push(symbol);
     }
 
-    pub fn init(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn init(&mut self) -> Result<(), Box<dyn std::error::Error + '_>> {
         for i in 0..self.num_workers {
             let endpoint = format!("inproc://worker-{}", i);
             let pusher = self.ctx.socket(zmq::PUSH)?;
             pusher.bind(&endpoint)?;
-            self.push_sockets.push(pusher);
+            self.work_pushers.push(pusher);
 
             let ctx_clone = self.ctx.clone();
+            // let symbols_clone = self.symbol_batches[i].clone();
+            let partial_map: HashMap<SymbolType, Vec<Arc<dyn Strategy>>> = self.symbol_batches[i]
+                .iter()
+                .filter_map(|&sym| {
+                    // Look up `Vec<Arc<…>>` in the main `stg_map`. If found, clone that Vec of Arcs.
+                    self.stg_map.get(&sym).map(|vec_of_arcs| (sym, vec_of_arcs.clone()))
+                })
+                .collect();
             let handler = thread::spawn(move || {
+                let quote_puller = ctx_clone.socket(zmq::PULL).expect("failed to create");
+                quote_puller.bind(&endpoint).expect("failed to bind");
+
                 let order_pusher = ctx_clone.socket(zmq::PUSH).expect("failed to create");
                 order_pusher.connect("ipc://@orders").expect("failed to connect");
-                let puller = ctx_clone.socket(zmq::PULL).expect("failed to create");
-                puller.connect(&endpoint).expect("failed to connect");
+
+                // receive quotes
                 let mut buffer = [0u8; std::mem::size_of::<TickData>()];
                 loop {
-                    match puller.recv_into(&mut buffer, 0) {
+                    match quote_puller.recv_into(&mut buffer, 0) {
                         Ok(n) if n == buffer.len() => {
-                            // do something
-                            let order = Order {
-                                stg_name: NameType::from("Aberration"),
-                                symbol: SymbolType::from("rb2505"),
-                                timestamp: 1749141737,
-                                volume: 1,
-                                direction: DirectionType::BUY,
-                                offset: OffsetFlagType::OPEN,
+                            let tick: TickData = unsafe {
+                                let ptr = buffer.as_ptr() as *const TickData;
+                                std::ptr::read_unaligned(ptr)
                             };
-                            println!("send: {:?}", &order);
-                            let bytes: &[u8] = unsafe {
-                                let ptr = &order as *const Order as *const u8;
-                                std::slice::from_raw_parts(ptr, mem::size_of::<Order>())
-                            };
-                            // println!("length of orde is {}", bytes.len());
-                            // send won't block as the sndhwm is unlimited
-                            if let Err(e) = order_pusher.send(bytes, 0) {
-                                eprintln!("Error sending on PUSH socket: {:?}", e);
-                                // In a real service, you might retry or back off here.
+                            if let Some(strategies) = partial_map.get(&tick.symbol) {
+                                for stg in strategies.iter() {
+                                    let order = stg.update(&tick);
+                                    println!("send: {:?}", &order);
+                                    let bytes: &[u8] = unsafe {
+                                        let ptr = &order as *const Order as *const u8;
+                                        std::slice::from_raw_parts(ptr, mem::size_of::<Order>())
+                                    };
+                                    // println!("length of orde is {}", bytes.len());
+                                    // send won't block as the sndhwm is unlimited
+                                    if let Err(e) = order_pusher.send(bytes, 0) {
+                                        eprintln!("Error sending on PUSH socket: {:?}", e);
+                                        // In a real service, you might retry or back off here.
+                                    }
+                                }
                             }
                         }
                         // ZMQ returned something else (maybe the socket was closed, or real error).
@@ -401,7 +421,7 @@ impl Engine {
                     }
                 }
             });
-            self.handlers.push(handler);
+            self.work_handlers.push(handler);
         }
 
         Ok(())
@@ -410,7 +430,7 @@ impl Engine {
     pub fn start(&self) {
         let mut buffer = [0u8; std::mem::size_of::<TickData>()];
         loop {
-            match self.quote_socket.recv_into(&mut buffer, 0) {
+            match self.quote_subscriber.recv_into(&mut buffer, 0) {
                 Ok(n) if n == buffer.len() => {
                     let tick: TickData = unsafe {
                         let ptr = buffer.as_ptr() as *const TickData;
@@ -418,7 +438,7 @@ impl Engine {
                     };
                     let worker_id = (tick.symbol.hash_future_symbol() as usize) % self.num_workers;
                     // send won't block as the sndhwm is unlimited
-                    if let Err(e) = self.push_sockets[worker_id].send(buffer.as_slice(), 0) {
+                    if let Err(e) = self.work_pushers[worker_id].send(buffer.as_slice(), 0) {
                         eprintln!("Error sending on PUSH socket: {:?}", e);
                         // In a real service, you might retry or back off here.
                     }
