@@ -33,7 +33,21 @@ impl Engine {
         stg_map.entry(symbol).or_insert_with(Vec::new).push(strategy);
     }
 
-    pub fn start(&self) -> Result<(), Box<dyn std::error::Error>> {}
+    pub fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let ctx = zmq::Context::new();
+        let subscriber = ctx.socket(zmq::SUB)?;
+        subscriber.set_rcvhwm(0)?;
+        subscriber.set_subscribe(b"")?;
+        subscriber.connect(&self.quote_addr)?;
+
+        let (tx, rx) = mpsc::channel::<Order>();
+
+        let pusher = ctx.socket(zmq::PUSH)?;
+        pusher.set_sndhwm(0)?;
+        pusher.set_linger(0)?; // Do not block on close
+        pusher.connect(&self.order_addr)?;
+
+    }
 
     pub fn stop(&self) {
         self.running.store(false, Ordering::SeqCst);
