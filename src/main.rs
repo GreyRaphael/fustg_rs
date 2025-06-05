@@ -1,7 +1,7 @@
-use crossbeam_channel::bounded;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
+use std::sync::mpsc;
 use std::{mem, thread};
 use threadpool::ThreadPool;
 use zmq;
@@ -187,8 +187,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     subscriber.set_subscribe(b"")?;
     subscriber.connect("ipc://@hq")?;
 
-    // let (tx, rx) = mpsc::channel::<Order>();
-    let (tx, rx) = bounded::<Order>(1024);
+    let (tx, rx) = mpsc::channel::<Order>();
 
     {
         let ctx_clone = ctx.clone();

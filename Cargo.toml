@@ -4,6 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-crossbeam-channel = "0.5.15"
 threadpool = "1.8.1"
 zmq = { git = "https://github.com/erickt/rust-zmq", branch = "master" }
