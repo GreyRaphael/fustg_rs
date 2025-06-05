@@ -143,7 +143,7 @@ pub struct Order {
 
 pub trait Strategy: Send + Sync {
     fn name(&self) -> NameType;
-    fn update(&self, tick: &TickData) -> Order;
+    fn update(&mut self, tick: &TickData) -> Order;
 }
 
 struct Aberration {
@@ -167,7 +167,8 @@ impl Strategy for Aberration {
         // is NameType is only Clone, it will move
         self.name
     }
-    fn update(&self, tick: &TickData) -> Order {
+    fn update(&mut self, tick: &TickData) -> Order {
+        self.ma_len += 1;
         // do some strategy to generate order
         Order {
             stg_name: self.name,
@@ -180,126 +181,126 @@ impl Strategy for Aberration {
     }
 }
 
-static RUNNING: AtomicBool = AtomicBool::new(true);
+// static RUNNING: AtomicBool = AtomicBool::new(true);
 
-fn main1() -> Result<(), Box<dyn std::error::Error>> {
-    // 1) Install a Ctrl-C handler that flips RUNNING to false
-    ctrlc::set_handler(move || {
-        // This closure is run in a signal‐handler context; it should be lightweight.
-        eprintln!("Caught SIGINT! Shutting down …");
-        RUNNING.store(false, Ordering::SeqCst);
-    })
-    .expect("Error setting Ctrl-C handler");
+// fn main1() -> Result<(), Box<dyn std::error::Error>> {
+//     // 1) Install a Ctrl-C handler that flips RUNNING to false
+//     ctrlc::set_handler(move || {
+//         // This closure is run in a signal‐handler context; it should be lightweight.
+//         eprintln!("Caught SIGINT! Shutting down …");
+//         RUNNING.store(false, Ordering::SeqCst);
+//     })
+//     .expect("Error setting Ctrl-C handler");
 
-    // 2) Create ZMQ context + SUB socket
-    let ctx = zmq::Context::new();
-    let subscriber = ctx.socket(zmq::SUB)?;
-    subscriber.set_rcvhwm(0)?;
-    subscriber.set_subscribe(b"")?;
-    subscriber.connect("ipc://@hq")?;
+//     // 2) Create ZMQ context + SUB socket
+//     let ctx = zmq::Context::new();
+//     let subscriber = ctx.socket(zmq::SUB)?;
+//     subscriber.set_rcvhwm(0)?;
+//     subscriber.set_subscribe(b"")?;
+//     subscriber.connect("ipc://@hq")?;
 
-    // 3) Create MPSC channel for Orders
-    let (tx, rx) = mpsc::channel::<Order>();
+//     // 3) Create MPSC channel for Orders
+//     let (tx, rx) = mpsc::channel::<Order>();
 
-    // 4) Spawn a PUSH‐socket thread that drains rx.recv()
-    let pusher = ctx.socket(zmq::PUSH)?;
-    pusher.set_sndhwm(0)?;
-    pusher.set_linger(0)?; // *key*: do not block on close even if the orders not hand-off
-    pusher.connect("ipc://@orders")?;
-    let push_handle = thread::spawn(move || {
-        // Loop until `rx.recv()` errors (i.e., channel closed)
-        while let Ok(order) = rx.recv() {
-            println!("send: {:?}", &order);
-            let bytes: &[u8] = unsafe {
-                let ptr = &order as *const Order as *const u8;
-                std::slice::from_raw_parts(ptr, mem::size_of::<Order>())
-            };
-            // println!("length of orde is {}", bytes.len());
-            // send won't block as the sndhwm is unlimited
-            if let Err(e) = pusher.send(bytes, 0) {
-                eprintln!("Error sending on PUSH socket: {:?}", e);
-                // In a real service, you might retry or back off here.
-            }
-        }
+//     // 4) Spawn a PUSH‐socket thread that drains rx.recv()
+//     let pusher = ctx.socket(zmq::PUSH)?;
+//     pusher.set_sndhwm(0)?;
+//     pusher.set_linger(0)?; // *key*: do not block on close even if the orders not hand-off
+//     pusher.connect("ipc://@orders")?;
+//     let push_handle = thread::spawn(move || {
+//         // Loop until `rx.recv()` errors (i.e., channel closed)
+//         while let Ok(order) = rx.recv() {
+//             println!("send: {:?}", &order);
+//             let bytes: &[u8] = unsafe {
+//                 let ptr = &order as *const Order as *const u8;
+//                 std::slice::from_raw_parts(ptr, mem::size_of::<Order>())
+//             };
+//             // println!("length of orde is {}", bytes.len());
+//             // send won't block as the sndhwm is unlimited
+//             if let Err(e) = pusher.send(bytes, 0) {
+//                 eprintln!("Error sending on PUSH socket: {:?}", e);
+//                 // In a real service, you might retry or back off here.
+//             }
+//         }
 
-        // Once `rx` is closed, we drop out here.
-        eprintln!("Push thread: channel closed, exiting.");
-    });
+//         // Once `rx` is closed, we drop out here.
+//         eprintln!("Push thread: channel closed, exiting.");
+//     });
 
-    // 5) Build a ThreadPool + strategy‐map (Arc)
-    let pool = ThreadPool::new(4);
+//     // 5) Build a ThreadPool + strategy‐map (Arc)
+//     let pool = ThreadPool::new(4);
 
-    let mut stg_map: HashMap<SymbolType, Vec<Box<dyn Strategy>>> = HashMap::new();
+//     let mut stg_map: HashMap<SymbolType, Vec<Box<dyn Strategy>>> = HashMap::new();
 
-    let mut stg_group1: Vec<Box<dyn Strategy>> = Vec::new();
-    stg_group1.push(Box::new(Aberration::new(100)));
-    stg_group1.push(Box::new(Aberration::new(200)));
-    let mut stg_group2: Vec<Box<dyn Strategy>> = Vec::new();
-    stg_group2.push(Box::new(Aberration::new(300)));
-    stg_group2.push(Box::new(Aberration::new(500)));
+//     let mut stg_group1: Vec<Box<dyn Strategy>> = Vec::new();
+//     stg_group1.push(Box::new(Aberration::new(100)));
+//     stg_group1.push(Box::new(Aberration::new(200)));
+//     let mut stg_group2: Vec<Box<dyn Strategy>> = Vec::new();
+//     stg_group2.push(Box::new(Aberration::new(300)));
+//     stg_group2.push(Box::new(Aberration::new(500)));
 
-    stg_map.insert(SymbolType::from("rb2505"), stg_group1);
-    stg_map.insert(SymbolType::from("MA505"), stg_group2);
+//     stg_map.insert(SymbolType::from("rb2505"), stg_group1);
+//     stg_map.insert(SymbolType::from("MA505"), stg_group2);
 
-    let stg_map = Arc::new(stg_map);
+//     let stg_map = Arc::new(stg_map);
 
-    // 6) Reuse a receive buffer for TickData
-    let mut buffer = [0u8; std::mem::size_of::<TickData>()];
-    while RUNNING.load(Ordering::SeqCst) {
-        // recv_into won't block as the rcvhwm is unlimited
-        match subscriber.recv_into(&mut buffer, 0) {
-            Ok(n) if n == buffer.len() => {
-                let tick: TickData = unsafe {
-                    let ptr = buffer.as_ptr() as *const TickData;
-                    std::ptr::read_unaligned(ptr)
-                };
-                // println!("recv: {:?}", tick);
-                let tx_clone = tx.clone();
-                let stg_map_clone = Arc::clone(&stg_map);
-                pool.execute(move || {
-                    if let Some(strategies) = stg_map_clone.get(&tick.symbol) {
-                        for stg in strategies.iter() {
-                            let order = stg.update(&tick);
-                            if let Err(e) = tx_clone.send(order) {
-                                eprintln!("Failed to send order: {:?} of {:?}", e, stg.name());
-                            }
-                        }
-                    }
-                    // else {
-                    //     eprintln!("No strategy found for symbol {:?}", tick.symbol);
-                    // }
-                });
-            }
-            // ZMQ returned something else (maybe the socket was closed, or real error).
-            Err(e) => {
-                eprintln!("SUB socket error (or closed): {:?}", e);
-                break;
-            }
+//     // 6) Reuse a receive buffer for TickData
+//     let mut buffer = [0u8; std::mem::size_of::<TickData>()];
+//     while RUNNING.load(Ordering::SeqCst) {
+//         // recv_into won't block as the rcvhwm is unlimited
+//         match subscriber.recv_into(&mut buffer, 0) {
+//             Ok(n) if n == buffer.len() => {
+//                 let tick: TickData = unsafe {
+//                     let ptr = buffer.as_ptr() as *const TickData;
+//                     std::ptr::read_unaligned(ptr)
+//                 };
+//                 // println!("recv: {:?}", tick);
+//                 let tx_clone = tx.clone();
+//                 let stg_map_clone = Arc::clone(&stg_map);
+//                 pool.execute(move || {
+//                     if let Some(strategies) = stg_map_clone.get_mut(&tick.symbol) {
+//                         for stg in strategies.iter_mut() {
+//                             let order = stg.update(&tick);
+//                             if let Err(e) = tx_clone.send(order) {
+//                                 eprintln!("Failed to send order: {:?} of {:?}", e, stg.name());
+//                             }
+//                         }
+//                     }
+//                     // else {
+//                     //     eprintln!("No strategy found for symbol {:?}", tick.symbol);
+//                     // }
+//                 });
+//             }
+//             // ZMQ returned something else (maybe the socket was closed, or real error).
+//             Err(e) => {
+//                 eprintln!("SUB socket error (or closed): {:?}", e);
+//                 break;
+//             }
 
-            // If we got fewer/more bytes than `size_of::<TickData>()`
-            Ok(n) => {
-                eprintln!("Warning: received {} bytes (expected {}); ignoring", n, buffer.len());
-                // Just keep going. If you prefer to stop, set RUNNING to false here.
-            }
-        }
-    }
+//             // If we got fewer/more bytes than `size_of::<TickData>()`
+//             Ok(n) => {
+//                 eprintln!("Warning: received {} bytes (expected {}); ignoring", n, buffer.len());
+//                 // Just keep going. If you prefer to stop, set RUNNING to false here.
+//             }
+//         }
+//     }
 
-    // 8) We exit the loop => time to shut down
-    eprintln!("Main loop detected RUNNING = false. Shutting down ...");
-    // 8a) Drop the sending side of the channel so the push thread’s `rx.recv()` returns Err.
-    drop(tx);
-    // 8b) Wait for the threadpool to finish any inflight jobs.
-    pool.join(); // This blocks until all submitted tasks have completed
+//     // 8) We exit the loop => time to shut down
+//     eprintln!("Main loop detected RUNNING = false. Shutting down ...");
+//     // 8a) Drop the sending side of the channel so the push thread’s `rx.recv()` returns Err.
+//     drop(tx);
+//     // 8b) Wait for the threadpool to finish any inflight jobs.
+//     pool.join(); // This blocks until all submitted tasks have completed
 
-    // 8c) Join the push‐socket thread
-    if let Err(join_err) = push_handle.join() {
-        eprintln!("Warning: push thread panicked or failed: {:?}", join_err);
-    }
+//     // 8c) Join the push‐socket thread
+//     if let Err(join_err) = push_handle.join() {
+//         eprintln!("Warning: push thread panicked or failed: {:?}", join_err);
+//     }
 
-    eprintln!("Clean shutdown complete. Exiting.");
+//     eprintln!("Clean shutdown complete. Exiting.");
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 impl SymbolType {
     /// 等价于 C++ 中的 `hashFutureSymbol`，将前两个字母打包成 u16。
@@ -327,12 +328,18 @@ pub struct Engine {
     work_pushers: Vec<zmq::Socket>,
     work_handlers: Vec<thread::JoinHandle<()>>,
     num_workers: usize,
-    stg_map: HashMap<SymbolType, Vec<Arc<dyn Strategy>>>,
+
+    /// For each symbol, we keep a Vec<Box<dyn Strategy>>.  At init() we will
+    /// move each Vec<Box<…>> into exactly one worker thread.
+    stg_map: HashMap<SymbolType, Vec<Box<dyn Strategy>>>,
+
+    /// Batches of symbols per worker; used only to pick where each symbol’s
+    /// strategies will go.
     symbol_batches: Vec<Vec<SymbolType>>,
 }
 
 impl Engine {
-    fn new(tick_url: &str, num_workers: usize) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(tick_url: &str, num_workers: usize) -> Result<Self, Box<dyn std::error::Error>> {
         let ctx = zmq::Context::new();
 
         // setup quote socket
@@ -351,71 +358,103 @@ impl Engine {
         })
     }
 
-    pub fn add_strategy(&mut self, symbol: SymbolType, strategy: Arc<dyn Strategy>) {
-        self.tick_subscriber.set_subscribe(&symbol.0).expect(&format!("subscibe {:?}", symbol));
-        self.stg_map.entry(symbol).or_insert_with(Vec::new).push(strategy);
+    /// Register a strategy for a given symbol.  We store it in stg_map as a
+    /// Box<dyn Strategy>.  It will not be shared—only one worker thread gets it.
+    pub fn add_strategy(&mut self, symbol: SymbolType, strategy: Box<dyn Strategy>) {
+        // Subscribe to exactly this symbol’s bytes on the ZMQ subscriber:
+        self.tick_subscriber
+            .set_subscribe(&symbol.0)
+            .expect(&format!("subscribe {:?}", symbol));
 
+        // Push into stg_map (we’ll later drain each Vec into a worker).
+        self.stg_map
+            .entry(symbol)
+            .or_insert_with(Vec::new)
+            .push(strategy);
+
+        // Figure out which worker “owns” this symbol (and all its strategies):
         let worker_id = (symbol.hash_future_symbol() as usize) % self.num_workers;
         self.symbol_batches[worker_id].push(symbol);
     }
 
+    /// Spawns one thread per worker.  Each worker “pulls” ticks from an inproc socket,
+    /// looks up its own strategies (moved here as `partial_map`), calls update(),
+    /// and re‐pushes Orders over “ipc://@orders”.
     pub fn init(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         for worker_id in 0..self.num_workers {
             let endpoint = format!("inproc://worker-{}", worker_id);
 
+            // Create a PUSH socket so the main thread can send TickData → this worker:
             let tick_pusher = self.ctx.socket(zmq::PUSH)?;
             tick_pusher.connect(&endpoint)?;
             self.work_pushers.push(tick_pusher);
 
-            // let symbols_clone = self.symbol_batches[i].clone();
-            let partial_map: HashMap<_, _> = self.symbol_batches[worker_id]
-                .iter()
-                .filter_map(|&sym| {
-                    // Look up `Vec<Arc<…>>` in the main `stg_map`. If found, clone that Vec of Arcs.
-                    self.stg_map.get(&sym).map(|vec_of_arcs| (sym, vec_of_arcs.clone()))
-                })
-                .collect();
+            // Build a local HashMap<SymbolType, Vec<Box<dyn Strategy>>> just for this worker.
+            // Since each symbol only goes to one worker, we can safely remove() them from stg_map.
+            let mut partial_map: HashMap<SymbolType, Vec<Box<dyn Strategy>>> = HashMap::new();
+            for &sym in &self.symbol_batches[worker_id] {
+                if let Some(vec_strats) = self.stg_map.remove(&sym) {
+                    partial_map.insert(sym, vec_strats);
+                }
+            }
 
+            // Clone the ZMQ context for the thread, and move partial_map into it:
             let ctx_clone = self.ctx.clone();
             let handler = thread::spawn(move || {
-                let tick_puller = ctx_clone.socket(zmq::PULL).expect("failed to create");
-                tick_puller.bind(&endpoint).expect("failed to bind");
+                // Each worker creates its own PULL to receive TickData:
+                let tick_puller = ctx_clone.socket(zmq::PULL).expect("failed to create PULL");
+                tick_puller
+                    .bind(&endpoint)
+                    .expect("failed to bind inproc PULL");
 
-                let order_pusher = ctx_clone.socket(zmq::PUSH).expect("failed to create");
-                order_pusher.connect("ipc://@orders").expect("failed to connect");
+                // Each worker also has a PUSH for sending Orders out:
+                let order_pusher = ctx_clone.socket(zmq::PUSH).expect("failed to create PUSH");
+                order_pusher
+                    .connect("ipc://@orders")
+                    .expect("failed to connect to orders");
 
-                // receive quotes
+                // We must make partial_map mutable so we can call update() on each Box<dyn Strategy>.
+                // let mut partial_map = partial_map;
+
                 let mut tick_buf = [0u8; std::mem::size_of::<TickData>()];
                 loop {
                     match tick_puller.recv_into(&mut tick_buf, 0) {
                         Ok(n) if n == tick_buf.len() => {
+                            // Reconstruct TickData from raw bytes:
                             let tick: TickData = unsafe {
                                 let ptr = tick_buf.as_ptr() as *const TickData;
                                 std::ptr::read_unaligned(ptr)
                             };
-                            if let Some(strategies) = partial_map.get(&tick.symbol) {
-                                for stg in strategies.iter() {
-                                    let order = stg.update(&tick);
+
+                            // Look up that symbol’s Vec<Box<dyn Strategy>>:
+                            if let Some(strategies) = partial_map.get_mut(&tick.symbol) {
+                                // For each Box<dyn Strategy>, we have &mut Box<…>,
+                                // so we can call `update(&mut self)` directly.
+                                for strat in strategies.iter_mut() {
+                                    let order = strat.update(&tick);
                                     println!("send: {:?}", &order);
+
+                                    // Serialize the Order back to bytes:
                                     let bytes: &[u8] = unsafe {
                                         let ptr = &order as *const Order as *const u8;
                                         std::slice::from_raw_parts(ptr, mem::size_of::<Order>())
                                     };
-                                    // println!("length of orde is {}", bytes.len());
-                                    // send won't block as the sndhwm is unlimited
                                     if let Err(e) = order_pusher.send(bytes, 0) {
                                         eprintln!("Error sending on PUSH socket: {:?}", e);
-                                        // In a real service, you might retry or back off here.
                                     }
                                 }
                             }
                         }
                         Ok(n) => {
-                            // Wrong number of bytes, ignore (but log a warning).
-                            eprintln!("Worker {}: got {} bytes (expected {}), ignoring", worker_id, n, tick_buf.len());
+                            eprintln!(
+                                "Worker {}: got {} bytes (expected {}), ignoring",
+                                worker_id,
+                                n,
+                                tick_buf.len()
+                            );
                         }
                         Err(e) => {
-                            eprintln!("Worker {}: SUB socket closed or error: {:?}", worker_id, e);
+                            eprintln!("Worker {}: recv error or socket closed: {:?}", worker_id, e);
                             break;
                         }
                     }
@@ -427,32 +466,33 @@ impl Engine {
         Ok(())
     }
 
+    /// The main thread’s loop: it simply pulls raw TickData from `tick_subscriber`
+    /// and pushes each tick into the appropriate worker’s inproc PUSH.
     pub fn start(&self) {
         let mut tick_buf = [0u8; std::mem::size_of::<TickData>()];
         loop {
             match self.tick_subscriber.recv_into(&mut tick_buf, 0) {
                 Ok(n) if n == tick_buf.len() => {
+                    // Reconstruct TickData just to figure out which worker to send to:
                     let tick: TickData = unsafe {
                         let ptr = tick_buf.as_ptr() as *const TickData;
                         std::ptr::read_unaligned(ptr)
                     };
                     let worker_id = (tick.symbol.hash_future_symbol() as usize) % self.num_workers;
-                    // send won't block as the sndhwm is unlimited
                     if let Err(e) = self.work_pushers[worker_id].send(tick_buf.as_slice(), 0) {
-                        eprintln!("Error sending on PUSH socket: {:?}", e);
-                        // In a real service, you might retry or back off here.
+                        eprintln!("Error sending tick to worker {}: {:?}", worker_id, e);
                     }
                 }
-                // ZMQ returned something else (maybe the socket was closed, or real error).
                 Err(e) => {
                     eprintln!("SUB socket error (or closed): {:?}", e);
                     break;
                 }
-
-                // If we got fewer/more bytes than `size_of::<TickData>()`
                 Ok(n) => {
-                    eprintln!("Warning: received {} bytes (expected {}); ignoring", n, tick_buf.len());
-                    // Just keep going. If you prefer to stop, set RUNNING to false here.
+                    eprintln!(
+                        "Warning: received {} bytes (expected {}); ignoring",
+                        n,
+                        tick_buf.len()
+                    );
                 }
             }
         }
