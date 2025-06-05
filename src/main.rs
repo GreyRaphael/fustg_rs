@@ -1,15 +1,15 @@
+use ctrlc;
 use std::array;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::{mem, thread};
 use threadpool::ThreadPool;
 use zmq;
 
-// -----------------------------------------------------------------------------
 // Alias for a 16‐byte, C‐style string (char[16])
-// -----------------------------------------------------------------------------
 #[repr(C)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct SymbolType(pub [u8; 16]);
@@ -66,9 +66,7 @@ impl From<&str> for NameType {
     }
 }
 
-// -----------------------------------------------------------------------------
 // TickData: exactly matches the C struct layout
-// -----------------------------------------------------------------------------
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct TickData {
@@ -112,9 +110,7 @@ pub struct TickData {
     pub adj: f64,           // double adj
 }
 
-// -----------------------------------------------------------------------------
 // C “enum class DirectionType : uint8_t { NONE, BUY, SELL };”
-// -----------------------------------------------------------------------------
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DirectionType {
@@ -123,9 +119,7 @@ pub enum DirectionType {
     SELL = 2,
 }
 
-// -----------------------------------------------------------------------------
 // C “enum class OffsetFlagType : uint8_t { NONE, OPEN, CLOSE };”
-// -----------------------------------------------------------------------------
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum OffsetFlagType {
@@ -134,9 +128,7 @@ pub enum OffsetFlagType {
     CLOSE = 2,
 }
 
-// -----------------------------------------------------------------------------
 // Order: matches the C struct exactly, assuming NameType is char[32]
-// -----------------------------------------------------------------------------
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Order {
@@ -187,34 +179,53 @@ impl Strategy for Aberration {
     }
 }
 
+static RUNNING: AtomicBool = AtomicBool::new(true);
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 1) Install a Ctrl-C handler that flips RUNNING to false
+    ctrlc::set_handler(move || {
+        // This closure is run in a signal‐handler context; it should be lightweight.
+        eprintln!("Caught SIGINT! Shutting down …");
+        RUNNING.store(false, Ordering::SeqCst);
+    })
+    .expect("Error setting Ctrl-C handler");
+
+    // 2) Create ZMQ context + SUB socket
     let ctx = zmq::Context::new();
     let subscriber = ctx.socket(zmq::SUB)?;
     subscriber.set_rcvhwm(0)?;
     subscriber.set_subscribe(b"")?;
     subscriber.connect("ipc://@hq")?;
 
+    // 3) Create MPSC channel for Orders
     let (tx, rx) = mpsc::channel::<Order>();
 
-    {
-        let pusher = ctx.socket(zmq::PUSH)?;
-        pusher.connect("ipc://@orders")?;
-        thread::spawn(move || {
-            while let Ok(order) = rx.recv() {
-                println!("send: {:?}", &order);
-                let bytes: &[u8] = unsafe {
-                    let ptr = &order as *const Order as *const u8;
-                    std::slice::from_raw_parts(ptr, mem::size_of::<Order>())
-                };
-                // println!("length of orde is {}", bytes.len());
-                if let Err(e) = pusher.send(bytes, 0) {
-                    eprintln!("Error sending on PUSH socket: {:?}", e);
-                    // In a real service, you might retry or back off here.
-                }
+    // 4) Spawn a PUSH‐socket thread that drains rx.recv()
+    let pusher = ctx.socket(zmq::PUSH)?;
+    pusher.set_sndhwm(0)?;
+    pusher.set_linger(0)?; // *key*: do not block on close even if the orders not hand-off
+    pusher.connect("ipc://@orders")?;
+    let push_handle = thread::spawn(move || {
+        // Loop until `rx.recv()` errors (i.e., channel closed)
+        while let Ok(order) = rx.recv() {
+            println!("send: {:?}", &order);
+            let bytes: &[u8] = unsafe {
+                let ptr = &order as *const Order as *const u8;
+                std::slice::from_raw_parts(ptr, mem::size_of::<Order>())
+            };
+            // println!("length of orde is {}", bytes.len());
+            // send won't block as the sndhwm is unlimited
+            if let Err(e) = pusher.send(bytes, 0) {
+                eprintln!("Error sending on PUSH socket: {:?}", e);
+                // In a real service, you might retry or back off here.
             }
-        });
-    }
+        }
 
+        // Once `rx` is closed, we drop out here.
+        eprintln!("Push thread: channel closed, exiting.");
+    });
+
+    // 5) Build a ThreadPool + strategy‐map (Arc)
     let pool = ThreadPool::new(4);
 
     let mut stg_map: HashMap<SymbolType, Vec<Box<dyn Strategy>>> = HashMap::new();
@@ -230,8 +241,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     stg_map.insert(SymbolType::from("MA505"), stg_group2);
 
     let stg_map = Arc::new(stg_map);
+
+    // 6) Reuse a receive buffer for TickData
     let mut buffer = [0u8; std::mem::size_of::<TickData>()];
-    loop {
+    while RUNNING.load(Ordering::SeqCst) {
+        // recv_into won't block as the rcvhwm is unlimited
         match subscriber.recv_into(&mut buffer, 0) {
             Ok(n) if n == buffer.len() => {
                 let tick: TickData = unsafe {
@@ -255,12 +269,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // }
                 });
             }
-            Ok(n) => {
-                eprintln!("Unexpected size: {} bytes", n);
-            }
+            // ZMQ returned something else (maybe the socket was closed, or real error).
             Err(e) => {
-                eprintln!("recv_into error: {}", e);
+                eprintln!("SUB socket error (or closed): {:?}", e);
+                break;
+            }
+
+            // If we got fewer/more bytes than `size_of::<TickData>()`
+            Ok(n) => {
+                eprintln!("Warning: received {} bytes (expected {}); ignoring", n, buffer.len());
+                // Just keep going. If you prefer to stop, set RUNNING to false here.
             }
         }
     }
+
+    // 8) We exit the loop => time to shut down
+    eprintln!("Main loop detected RUNNING = false. Shutting down ...");
+    // 8a) Drop the sending side of the channel so the push thread’s `rx.recv()` returns Err.
+    drop(tx);
+    // 8b) Wait for the threadpool to finish any inflight jobs.
+    pool.join(); // This blocks until all submitted tasks have completed
+
+    // 8c) Join the push‐socket thread
+    if let Err(join_err) = push_handle.join() {
+        eprintln!("Warning: push thread panicked or failed: {:?}", join_err);
+    }
+
+    eprintln!("Clean shutdown complete. Exiting.");
+
+    Ok(())
 }
