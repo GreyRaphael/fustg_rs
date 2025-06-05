@@ -360,21 +360,22 @@ impl Engine {
     }
 
     pub fn init(&mut self) -> Result<(), Box<dyn std::error::Error + '_>> {
-        for i in 0..self.num_workers {
-            let endpoint = format!("inproc://worker-{}", i);
-            let pusher = self.ctx.socket(zmq::PUSH)?;
-            pusher.bind(&endpoint)?;
-            self.work_pushers.push(pusher);
+        for worker_id in 0..self.num_workers {
+            let endpoint = format!("inproc://worker-{}", worker_id);
+            let quote_pusher = self.ctx.socket(zmq::PUSH)?;
+            quote_pusher.connect(&endpoint)?;
+            self.work_pushers.push(quote_pusher);
 
-            let ctx_clone = self.ctx.clone();
             // let symbols_clone = self.symbol_batches[i].clone();
-            let partial_map: HashMap<SymbolType, Vec<Arc<dyn Strategy>>> = self.symbol_batches[i]
+            let partial_map: HashMap<_, _> = self.symbol_batches[worker_id]
                 .iter()
                 .filter_map(|&sym| {
                     // Look up `Vec<Arc<…>>` in the main `stg_map`. If found, clone that Vec of Arcs.
                     self.stg_map.get(&sym).map(|vec_of_arcs| (sym, vec_of_arcs.clone()))
                 })
                 .collect();
+
+            let ctx_clone = self.ctx.clone();
             let handler = thread::spawn(move || {
                 let quote_puller = ctx_clone.socket(zmq::PULL).expect("failed to create");
                 quote_puller.bind(&endpoint).expect("failed to bind");
@@ -383,12 +384,12 @@ impl Engine {
                 order_pusher.connect("ipc://@orders").expect("failed to connect");
 
                 // receive quotes
-                let mut buffer = [0u8; std::mem::size_of::<TickData>()];
+                let mut tick_buf = [0u8; std::mem::size_of::<TickData>()];
                 loop {
-                    match quote_puller.recv_into(&mut buffer, 0) {
-                        Ok(n) if n == buffer.len() => {
+                    match quote_puller.recv_into(&mut tick_buf, 0) {
+                        Ok(n) if n == tick_buf.len() => {
                             let tick: TickData = unsafe {
-                                let ptr = buffer.as_ptr() as *const TickData;
+                                let ptr = tick_buf.as_ptr() as *const TickData;
                                 std::ptr::read_unaligned(ptr)
                             };
                             if let Some(strategies) = partial_map.get(&tick.symbol) {
@@ -408,15 +409,13 @@ impl Engine {
                                 }
                             }
                         }
-                        // ZMQ returned something else (maybe the socket was closed, or real error).
-                        Err(e) => {
-                            eprintln!("SUB socket error (or closed): {:?}", e);
-                            break;
-                        }
-                        // If we got fewer/more bytes than `size_of::<TickData>()`
                         Ok(n) => {
-                            eprintln!("Warning: received {} bytes (expected {}); ignoring", n, buffer.len());
-                            // Just keep going. If you prefer to stop, set RUNNING to false here.
+                            // Wrong number of bytes, ignore (but log a warning).
+                            eprintln!("Worker {}: got {} bytes (expected {}), ignoring", worker_id, n, tick_buf.len());
+                        }
+                        Err(e) => {
+                            eprintln!("Worker {}: SUB socket closed or error: {:?}", worker_id, e);
+                            break;
                         }
                     }
                 }
@@ -428,17 +427,17 @@ impl Engine {
     }
 
     pub fn start(&self) {
-        let mut buffer = [0u8; std::mem::size_of::<TickData>()];
+        let mut tick_buf = [0u8; std::mem::size_of::<TickData>()];
         loop {
-            match self.quote_subscriber.recv_into(&mut buffer, 0) {
-                Ok(n) if n == buffer.len() => {
+            match self.quote_subscriber.recv_into(&mut tick_buf, 0) {
+                Ok(n) if n == tick_buf.len() => {
                     let tick: TickData = unsafe {
-                        let ptr = buffer.as_ptr() as *const TickData;
+                        let ptr = tick_buf.as_ptr() as *const TickData;
                         std::ptr::read_unaligned(ptr)
                     };
                     let worker_id = (tick.symbol.hash_future_symbol() as usize) % self.num_workers;
                     // send won't block as the sndhwm is unlimited
-                    if let Err(e) = self.work_pushers[worker_id].send(buffer.as_slice(), 0) {
+                    if let Err(e) = self.work_pushers[worker_id].send(tick_buf.as_slice(), 0) {
                         eprintln!("Error sending on PUSH socket: {:?}", e);
                         // In a real service, you might retry or back off here.
                     }
@@ -451,7 +450,7 @@ impl Engine {
 
                 // If we got fewer/more bytes than `size_of::<TickData>()`
                 Ok(n) => {
-                    eprintln!("Warning: received {} bytes (expected {}); ignoring", n, buffer.len());
+                    eprintln!("Warning: received {} bytes (expected {}); ignoring", n, tick_buf.len());
                     // Just keep going. If you prefer to stop, set RUNNING to false here.
                 }
             }
