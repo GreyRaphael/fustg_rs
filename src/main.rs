@@ -16,8 +16,7 @@ pub struct SymbolType(pub [u8; 16]);
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub struct StrategyType(pub [u8; 32]);
-// pub type StrategyType = [u8; 16]; // ← assumed same as SymbolType
+pub struct NameType(pub [u8; 32]);
 
 impl SymbolType {
     /// Interpret the bytes as a (possibly NUL-terminated) UTF-8 string.
@@ -35,7 +34,15 @@ impl fmt::Debug for SymbolType {
     }
 }
 
-impl StrategyType {
+impl From<&str> for SymbolType {
+    fn from(s: &str) -> Self {
+        let bytes = s.as_bytes();
+        let arr = array::from_fn(|i: usize| if i < bytes.len() && i < 16 { bytes[i] } else { 0 });
+        SymbolType(arr)
+    }
+}
+
+impl NameType {
     /// Interpret the bytes as a (possibly NUL-terminated) UTF-8 string.
     pub fn as_str(&self) -> &str {
         // Find the first 0 byte (or use full length if none).
@@ -45,25 +52,17 @@ impl StrategyType {
     }
 }
 
-impl fmt::Debug for StrategyType {
+impl fmt::Debug for NameType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
     }
 }
 
-impl From<&str> for SymbolType {
-    fn from(s: &str) -> Self {
-        let bytes = s.as_bytes();
-        let arr = array::from_fn(|i: usize| if i < bytes.len() && i < 16 { bytes[i] } else { 0 });
-        SymbolType(arr)
-    }
-}
-
-impl From<&str> for StrategyType {
+impl From<&str> for NameType {
     fn from(s: &str) -> Self {
         let bytes = s.as_bytes();
         let arr = array::from_fn(|i: usize| if i < bytes.len() && i < 32 { bytes[i] } else { 0 });
-        StrategyType(arr)
+        NameType(arr)
     }
 }
 
@@ -136,12 +135,12 @@ pub enum OffsetFlagType {
 }
 
 // -----------------------------------------------------------------------------
-// Order: matches the C struct exactly, assuming StrategyType is [c_char; 16]
+// Order: matches the C struct exactly, assuming NameType is char[32]
 // -----------------------------------------------------------------------------
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Order {
-    pub stg_name: StrategyType,   // StrategyType stg_name;
+    pub stg_name: NameType,       // NameType stg_name;
     pub symbol: SymbolType,       // SymbolType symbol;
     pub timestamp: i64,           // int64_t timestamp;
     pub volume: u32,              // uint32_t volume;
@@ -150,26 +149,29 @@ pub struct Order {
 }
 
 trait Strategy: Send + Sync {
-    fn name(&self) -> StrategyType;
+    fn name(&self) -> NameType;
     fn update(&self, tick: &TickData) -> Order;
 }
 
 struct Aberration {
     ma_len: u32,
-    name: StrategyType,
+    name: NameType,
 }
 
 impl Aberration {
     fn new(ma_len: u32) -> Self {
+        let full_str = format!("Aberration{}", ma_len);
         Self {
             ma_len,
-            name: StrategyType::from("Aberration"),
+            name: NameType::from(full_str.as_str()),
         }
     }
 }
 
 impl Strategy for Aberration {
-    fn name(&self) -> StrategyType {
+    fn name(&self) -> NameType {
+        // as NameType is Copy, so it will copy here
+        // is NameType is only Clone, it will move
         self.name
     }
     fn update(&self, tick: &TickData) -> Order {
@@ -195,10 +197,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (tx, rx) = mpsc::channel::<Order>();
 
     {
-        let ctx_clone = ctx.clone();
+        let pusher = ctx.socket(zmq::PUSH)?;
+        pusher.connect("ipc://@orders")?;
         thread::spawn(move || {
-            let pusher = ctx_clone.socket(zmq::PUSH).expect("failed to create PUSH");
-            pusher.connect("ipc://@orders").expect("failed to connect pusher");
             while let Ok(order) = rx.recv() {
                 println!("send: {:?}", &order);
                 let bytes: &[u8] = unsafe {
@@ -217,15 +218,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = ThreadPool::new(4);
 
     let mut stg_map: HashMap<SymbolType, Vec<Box<dyn Strategy>>> = HashMap::new();
-    let sym = SymbolType::from("rb2505");
 
-    let mut strategies: Vec<Box<dyn Strategy>> = Vec::new();
-    strategies.push(Box::new(Aberration::new(100)));
-    strategies.push(Box::new(Aberration::new(200)));
+    let mut stg_group1: Vec<Box<dyn Strategy>> = Vec::new();
+    stg_group1.push(Box::new(Aberration::new(100)));
+    stg_group1.push(Box::new(Aberration::new(200)));
+    let mut stg_group2: Vec<Box<dyn Strategy>> = Vec::new();
+    stg_group2.push(Box::new(Aberration::new(300)));
+    stg_group2.push(Box::new(Aberration::new(500)));
 
-    stg_map.insert(sym, strategies);
+    stg_map.insert(SymbolType::from("rb2505"), stg_group1);
+    stg_map.insert(SymbolType::from("MA505"), stg_group2);
+
     let stg_map = Arc::new(stg_map);
-
     let mut buffer = [0u8; std::mem::size_of::<TickData>()];
     loop {
         match subscriber.recv_into(&mut buffer, 0) {
@@ -234,6 +238,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let ptr = buffer.as_ptr() as *const TickData;
                     std::ptr::read_unaligned(ptr)
                 };
+                // println!("recv: {:?}", tick);
                 let tx_clone = tx.clone();
                 let stg_map_clone = Arc::clone(&stg_map);
                 pool.execute(move || {
