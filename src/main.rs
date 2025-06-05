@@ -362,15 +362,10 @@ impl Engine {
     /// Box<dyn Strategy>.  It will not be shared—only one worker thread gets it.
     pub fn add_strategy(&mut self, symbol: SymbolType, strategy: Box<dyn Strategy>) {
         // Subscribe to exactly this symbol’s bytes on the ZMQ subscriber:
-        self.tick_subscriber
-            .set_subscribe(&symbol.0)
-            .expect(&format!("subscribe {:?}", symbol));
+        self.tick_subscriber.set_subscribe(&symbol.0).expect(&format!("subscribe {:?}", symbol));
 
         // Push into stg_map (we’ll later drain each Vec into a worker).
-        self.stg_map
-            .entry(symbol)
-            .or_insert_with(Vec::new)
-            .push(strategy);
+        self.stg_map.entry(symbol).or_insert_with(Vec::new).push(strategy);
 
         // Figure out which worker “owns” this symbol (and all its strategies):
         let worker_id = (symbol.hash_future_symbol() as usize) % self.num_workers;
@@ -391,7 +386,7 @@ impl Engine {
 
             // Build a local HashMap<SymbolType, Vec<Box<dyn Strategy>>> just for this worker.
             // Since each symbol only goes to one worker, we can safely remove() them from stg_map.
-            let mut partial_map: HashMap<SymbolType, Vec<Box<dyn Strategy>>> = HashMap::new();
+            let mut partial_map = HashMap::new();
             for &sym in &self.symbol_batches[worker_id] {
                 if let Some(vec_strats) = self.stg_map.remove(&sym) {
                     partial_map.insert(sym, vec_strats);
@@ -403,15 +398,11 @@ impl Engine {
             let handler = thread::spawn(move || {
                 // Each worker creates its own PULL to receive TickData:
                 let tick_puller = ctx_clone.socket(zmq::PULL).expect("failed to create PULL");
-                tick_puller
-                    .bind(&endpoint)
-                    .expect("failed to bind inproc PULL");
+                tick_puller.bind(&endpoint).expect("failed to bind inproc PULL");
 
                 // Each worker also has a PUSH for sending Orders out:
                 let order_pusher = ctx_clone.socket(zmq::PUSH).expect("failed to create PUSH");
-                order_pusher
-                    .connect("ipc://@orders")
-                    .expect("failed to connect to orders");
+                order_pusher.connect("ipc://@orders").expect("failed to connect to orders");
 
                 // We must make partial_map mutable so we can call update() on each Box<dyn Strategy>.
                 // let mut partial_map = partial_map;
@@ -446,12 +437,7 @@ impl Engine {
                             }
                         }
                         Ok(n) => {
-                            eprintln!(
-                                "Worker {}: got {} bytes (expected {}), ignoring",
-                                worker_id,
-                                n,
-                                tick_buf.len()
-                            );
+                            eprintln!("Worker {}: got {} bytes (expected {}), ignoring", worker_id, n, tick_buf.len());
                         }
                         Err(e) => {
                             eprintln!("Worker {}: recv error or socket closed: {:?}", worker_id, e);
@@ -488,11 +474,7 @@ impl Engine {
                     break;
                 }
                 Ok(n) => {
-                    eprintln!(
-                        "Warning: received {} bytes (expected {}); ignoring",
-                        n,
-                        tick_buf.len()
-                    );
+                    eprintln!("Warning: received {} bytes (expected {}); ignoring", n, tick_buf.len());
                 }
             }
         }
