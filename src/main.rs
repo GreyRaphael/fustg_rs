@@ -1,3 +1,4 @@
+use std::array;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
@@ -47,6 +48,22 @@ impl StrategyType {
 impl fmt::Debug for StrategyType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
+    }
+}
+
+impl From<&str> for SymbolType {
+    fn from(s: &str) -> Self {
+        let bytes = s.as_bytes();
+        let arr = array::from_fn(|i: usize| if i < bytes.len() && i < 16 { bytes[i] } else { 0 });
+        SymbolType(arr)
+    }
+}
+
+impl From<&str> for StrategyType {
+    fn from(s: &str) -> Self {
+        let bytes = s.as_bytes();
+        let arr = array::from_fn(|i: usize| if i < bytes.len() && i < 32 { bytes[i] } else { 0 });
+        StrategyType(arr)
     }
 }
 
@@ -132,45 +149,33 @@ pub struct Order {
     pub offset: OffsetFlagType,   // OffsetFlagType offset;
 }
 
-fn str_to_array16(s: &str) -> [u8; 16] {
-    let mut buf = [0u8; 16];
-    let bytes = s.as_bytes();
-    let n = bytes.len().min(16);
-    buf[..n].copy_from_slice(&bytes[..n]);
-    buf
-}
-
-fn str_to_array32(s: &str) -> [u8; 32] {
-    let mut buf = [0u8; 32];
-    let bytes = s.as_bytes();
-    let n = bytes.len().min(32);
-    buf[..n].copy_from_slice(&bytes[..n]);
-    buf
-}
-
 trait Strategy: Send + Sync {
-    fn name(&self) -> String;
+    fn name(&self) -> StrategyType;
     fn update(&self, tick: &TickData) -> Order;
 }
 
 struct Aberration {
     ma_len: u32,
+    name: StrategyType,
 }
 
 impl Aberration {
     fn new(ma_len: u32) -> Self {
-        Self { ma_len }
+        Self {
+            ma_len,
+            name: StrategyType::from("Aberration"),
+        }
     }
 }
 
 impl Strategy for Aberration {
-    fn name(&self) -> String {
-        format!("Aberration{}", self.ma_len)
+    fn name(&self) -> StrategyType {
+        self.name
     }
     fn update(&self, tick: &TickData) -> Order {
         // do some strategy to generate order
         Order {
-            stg_name: StrategyType(str_to_array32(&self.name())),
+            stg_name: self.name,
             symbol: tick.symbol,
             timestamp: tick.stamp,
             volume: 1,
@@ -193,7 +198,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ctx_clone = ctx.clone();
         thread::spawn(move || {
             let pusher = ctx_clone.socket(zmq::PUSH).expect("failed to create PUSH");
-            pusher.connect("ipc://@orders").expect("failed to bind pusher");
+            pusher.connect("ipc://@orders").expect("failed to connect pusher");
             while let Ok(order) = rx.recv() {
                 println!("send: {:?}", &order);
                 let bytes: &[u8] = unsafe {
@@ -212,7 +217,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = ThreadPool::new(4);
 
     let mut stg_map: HashMap<SymbolType, Vec<Box<dyn Strategy>>> = HashMap::new();
-    let sym = SymbolType(str_to_array16("rb2505"));
+    let sym = SymbolType::from("rb2505");
 
     let mut strategies: Vec<Box<dyn Strategy>> = Vec::new();
     strategies.push(Box::new(Aberration::new(100)));
@@ -221,28 +226,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     stg_map.insert(sym, strategies);
     let stg_map = Arc::new(stg_map);
 
+    let mut buffer = [0u8; std::mem::size_of::<TickData>()];
     loop {
-        let mut msg = zmq::Message::new();
-        subscriber.recv(&mut msg, 0)?;
-        let buf = msg.as_ref();
-        let tick: TickData = unsafe {
-            let ptr = buf.as_ptr() as *const TickData;
-            std::ptr::read_unaligned(ptr)
-        };
-        let tx_clone = tx.clone();
-        let stg_map_clone = Arc::clone(&stg_map);
-        pool.execute(move || {
-            if let Some(strategies) = stg_map_clone.get(&tick.symbol) {
-                for stg in strategies.iter() {
-                    let order = stg.update(&tick);
-                    if let Err(e) = tx_clone.send(order) {
-                        eprintln!("Failed to send order: {:?} of {}", e, stg.name());
+        match subscriber.recv_into(&mut buffer, 0) {
+            Ok(n) if n == buffer.len() => {
+                let tick: TickData = unsafe {
+                    let ptr = buffer.as_ptr() as *const TickData;
+                    std::ptr::read_unaligned(ptr)
+                };
+                let tx_clone = tx.clone();
+                let stg_map_clone = Arc::clone(&stg_map);
+                pool.execute(move || {
+                    if let Some(strategies) = stg_map_clone.get(&tick.symbol) {
+                        for stg in strategies.iter() {
+                            let order = stg.update(&tick);
+                            if let Err(e) = tx_clone.send(order) {
+                                eprintln!("Failed to send order: {:?} of {:?}", e, stg.name());
+                            }
+                        }
                     }
-                }
+                    // else {
+                    //     eprintln!("No strategy found for symbol {:?}", tick.symbol);
+                    // }
+                });
             }
-            // else {
-            //     eprintln!("No strategy found for symbol {:?}", tick.symbol);
-            // }
-        });
+            Ok(n) => {
+                eprintln!("Unexpected size: {} bytes", n);
+            }
+            Err(e) => {
+                eprintln!("recv_into error: {}", e);
+            }
+        }
     }
 }
