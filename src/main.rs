@@ -181,127 +181,6 @@ impl Strategy for Aberration {
     }
 }
 
-// static RUNNING: AtomicBool = AtomicBool::new(true);
-
-// fn main1() -> Result<(), Box<dyn std::error::Error>> {
-//     // 1) Install a Ctrl-C handler that flips RUNNING to false
-//     ctrlc::set_handler(move || {
-//         // This closure is run in a signal‐handler context; it should be lightweight.
-//         eprintln!("Caught SIGINT! Shutting down …");
-//         RUNNING.store(false, Ordering::SeqCst);
-//     })
-//     .expect("Error setting Ctrl-C handler");
-
-//     // 2) Create ZMQ context + SUB socket
-//     let ctx = zmq::Context::new();
-//     let subscriber = ctx.socket(zmq::SUB)?;
-//     subscriber.set_rcvhwm(0)?;
-//     subscriber.set_subscribe(b"")?;
-//     subscriber.connect("ipc://@hq")?;
-
-//     // 3) Create MPSC channel for Orders
-//     let (tx, rx) = mpsc::channel::<Order>();
-
-//     // 4) Spawn a PUSH‐socket thread that drains rx.recv()
-//     let pusher = ctx.socket(zmq::PUSH)?;
-//     pusher.set_sndhwm(0)?;
-//     pusher.set_linger(0)?; // *key*: do not block on close even if the orders not hand-off
-//     pusher.connect("ipc://@orders")?;
-//     let push_handle = thread::spawn(move || {
-//         // Loop until `rx.recv()` errors (i.e., channel closed)
-//         while let Ok(order) = rx.recv() {
-//             println!("send: {:?}", &order);
-//             let bytes: &[u8] = unsafe {
-//                 let ptr = &order as *const Order as *const u8;
-//                 std::slice::from_raw_parts(ptr, mem::size_of::<Order>())
-//             };
-//             // println!("length of orde is {}", bytes.len());
-//             // send won't block as the sndhwm is unlimited
-//             if let Err(e) = pusher.send(bytes, 0) {
-//                 eprintln!("Error sending on PUSH socket: {:?}", e);
-//                 // In a real service, you might retry or back off here.
-//             }
-//         }
-
-//         // Once `rx` is closed, we drop out here.
-//         eprintln!("Push thread: channel closed, exiting.");
-//     });
-
-//     // 5) Build a ThreadPool + strategy‐map (Arc)
-//     let pool = ThreadPool::new(4);
-
-//     let mut stg_map: HashMap<SymbolType, Vec<Box<dyn Strategy>>> = HashMap::new();
-
-//     let mut stg_group1: Vec<Box<dyn Strategy>> = Vec::new();
-//     stg_group1.push(Box::new(Aberration::new(100)));
-//     stg_group1.push(Box::new(Aberration::new(200)));
-//     let mut stg_group2: Vec<Box<dyn Strategy>> = Vec::new();
-//     stg_group2.push(Box::new(Aberration::new(300)));
-//     stg_group2.push(Box::new(Aberration::new(500)));
-
-//     stg_map.insert(SymbolType::from("rb2505"), stg_group1);
-//     stg_map.insert(SymbolType::from("MA505"), stg_group2);
-
-//     let stg_map = Arc::new(stg_map);
-
-//     // 6) Reuse a receive buffer for TickData
-//     let mut buffer = [0u8; std::mem::size_of::<TickData>()];
-//     while RUNNING.load(Ordering::SeqCst) {
-//         // recv_into won't block as the rcvhwm is unlimited
-//         match subscriber.recv_into(&mut buffer, 0) {
-//             Ok(n) if n == buffer.len() => {
-//                 let tick: TickData = unsafe {
-//                     let ptr = buffer.as_ptr() as *const TickData;
-//                     std::ptr::read_unaligned(ptr)
-//                 };
-//                 // println!("recv: {:?}", tick);
-//                 let tx_clone = tx.clone();
-//                 let stg_map_clone = Arc::clone(&stg_map);
-//                 pool.execute(move || {
-//                     if let Some(strategies) = stg_map_clone.get_mut(&tick.symbol) {
-//                         for stg in strategies.iter_mut() {
-//                             let order = stg.update(&tick);
-//                             if let Err(e) = tx_clone.send(order) {
-//                                 eprintln!("Failed to send order: {:?} of {:?}", e, stg.name());
-//                             }
-//                         }
-//                     }
-//                     // else {
-//                     //     eprintln!("No strategy found for symbol {:?}", tick.symbol);
-//                     // }
-//                 });
-//             }
-//             // ZMQ returned something else (maybe the socket was closed, or real error).
-//             Err(e) => {
-//                 eprintln!("SUB socket error (or closed): {:?}", e);
-//                 break;
-//             }
-
-//             // If we got fewer/more bytes than `size_of::<TickData>()`
-//             Ok(n) => {
-//                 eprintln!("Warning: received {} bytes (expected {}); ignoring", n, buffer.len());
-//                 // Just keep going. If you prefer to stop, set RUNNING to false here.
-//             }
-//         }
-//     }
-
-//     // 8) We exit the loop => time to shut down
-//     eprintln!("Main loop detected RUNNING = false. Shutting down ...");
-//     // 8a) Drop the sending side of the channel so the push thread’s `rx.recv()` returns Err.
-//     drop(tx);
-//     // 8b) Wait for the threadpool to finish any inflight jobs.
-//     pool.join(); // This blocks until all submitted tasks have completed
-
-//     // 8c) Join the push‐socket thread
-//     if let Err(join_err) = push_handle.join() {
-//         eprintln!("Warning: push thread panicked or failed: {:?}", join_err);
-//     }
-
-//     eprintln!("Clean shutdown complete. Exiting.");
-
-//     Ok(())
-// }
-
 impl SymbolType {
     /// 等价于 C++ 中的 `hashFutureSymbol`，将前两个字母打包成 u16。
     /// 如果第一个字符不是 A–Z/a–z，返回 0；
@@ -322,47 +201,46 @@ impl SymbolType {
     }
 }
 
-pub struct Engine {
+pub struct CtaEngine {
+    num_workers: usize,
+    senders: Vec<mpsc::Sender<TickData>>,
+    handles: Vec<thread::JoinHandle<()>>,
+    started: bool,
     ctx: zmq::Context,
     tick_subscriber: zmq::Socket,
-    work_pushers: Vec<zmq::Socket>,
-    work_handlers: Vec<thread::JoinHandle<()>>,
-    num_workers: usize,
-
-    /// For each symbol, we keep a Vec<Box<dyn Strategy>>.  At init() we will
-    /// move each Vec<Box<…>> into exactly one worker thread.
     stg_map: HashMap<SymbolType, Vec<Box<dyn Strategy>>>,
-
-    /// Batches of symbols per worker; used only to pick where each symbol’s
-    /// strategies will go.
     symbol_batches: Vec<Vec<SymbolType>>,
+    order_uri: String,
 }
 
-impl Engine {
-    pub fn new(tick_url: &str, num_workers: usize) -> Result<Self, Box<dyn std::error::Error>> {
+impl CtaEngine {
+    pub fn new(tick_uri: &str, order_uri: &str, num_workers: usize) -> Self {
         let ctx = zmq::Context::new();
 
-        // setup quote socket
-        let tick_subscriber = ctx.socket(zmq::SUB)?;
-        tick_subscriber.set_rcvhwm(0)?;
-        tick_subscriber.connect(tick_url)?;
+        let tick_subscriber = ctx.socket(zmq::SUB).expect("msg");
+        tick_subscriber.set_rcvhwm(0).expect("msg");
+        tick_subscriber.connect(tick_uri).expect("msg");
 
-        Ok(Engine {
+        CtaEngine {
+            num_workers,
+            senders: Vec::with_capacity(num_workers),
+            handles: Vec::with_capacity(num_workers),
+            started: false,
             ctx,
             tick_subscriber,
-            work_pushers: Vec::with_capacity(num_workers),
-            work_handlers: Vec::with_capacity(num_workers),
-            num_workers,
             stg_map: HashMap::new(),
             symbol_batches: vec![Vec::new(); num_workers],
-        })
+            order_uri: order_uri.into(),
+        }
     }
 
     /// Register a strategy for a given symbol.  We store it in stg_map as a
     /// Box<dyn Strategy>.  It will not be shared—only one worker thread gets it.
     pub fn add_strategy(&mut self, symbol: SymbolType, strategy: Box<dyn Strategy>) {
         // Subscribe to exactly this symbol’s bytes on the ZMQ subscriber:
-        self.tick_subscriber.set_subscribe(&symbol.0).expect(&format!("subscribe {:?}", symbol));
+        self.tick_subscriber
+            .set_subscribe(&symbol.0)
+            .expect(&format!("failed to subscribe {:?}", symbol));
 
         // Push into stg_map (we’ll later drain each Vec into a worker).
         self.stg_map.entry(symbol).or_insert_with(Vec::new).push(strategy);
@@ -372,100 +250,70 @@ impl Engine {
         self.symbol_batches[worker_id].push(symbol);
     }
 
-    /// Spawns one thread per worker.  Each worker “pulls” ticks from an inproc socket,
-    /// looks up its own strategies (moved here as `partial_map`), calls update(),
-    /// and re‐pushes Orders over “ipc://@orders”.
-    pub fn init(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn init(&mut self) {
+        if self.started {
+            eprintln!("Engine::init() called more than once without stop()");
+            return;
+        }
+        self.started = true;
+
         for worker_id in 0..self.num_workers {
-            let endpoint = format!("inproc://worker-{}", worker_id);
+            let mut partial_map: HashMap<_, _> = self.symbol_batches[worker_id]
+                .iter()
+                .copied()
+                .filter_map(|sym| self.stg_map.remove(&sym).map(|v| (sym, v)))
+                .collect();
 
-            // Create a PUSH socket so the main thread can send TickData → this worker:
-            let tick_pusher = self.ctx.socket(zmq::PUSH)?;
-            tick_pusher.connect(&endpoint)?;
-            self.work_pushers.push(tick_pusher);
+            let (tx, rx) = mpsc::channel::<TickData>();
+            self.senders.push(tx);
 
-            // Build a local HashMap<SymbolType, Vec<Box<dyn Strategy>>> just for this worker.
-            // Since each symbol only goes to one worker, we can safely remove() them from stg_map.
-            let mut partial_map = HashMap::new();
-            for &sym in &self.symbol_batches[worker_id] {
-                if let Some(vec_strats) = self.stg_map.remove(&sym) {
-                    partial_map.insert(sym, vec_strats);
-                }
-            }
-
-            // Clone the ZMQ context for the thread, and move partial_map into it:
             let ctx_clone = self.ctx.clone();
-            let handler = thread::spawn(move || {
-                // Each worker creates its own PULL to receive TickData:
-                let tick_puller = ctx_clone.socket(zmq::PULL).expect("failed to create PULL");
-                tick_puller.bind(&endpoint).expect("failed to bind inproc PULL");
-
+            let order_uri = self.order_uri.clone();
+            let handle = thread::spawn(move || {
                 // Each worker also has a PUSH for sending Orders out:
                 let order_pusher = ctx_clone.socket(zmq::PUSH).expect("failed to create PUSH");
-                order_pusher.connect("ipc://@orders").expect("failed to connect to orders");
+                order_pusher.connect(&order_uri).expect("failed to connect to orders");
 
-                // We must make partial_map mutable so we can call update() on each Box<dyn Strategy>.
-                // let mut partial_map = partial_map;
+                for tick in rx {
+                    // Look up that symbol’s Vec<Box<dyn Strategy>>:
+                    if let Some(strategies) = partial_map.get_mut(&tick.symbol) {
+                        // For each Box<dyn Strategy>, we have &mut Box<…>,
+                        // so we can call `update(&mut self)` directly.
+                        for strat in strategies.iter_mut() {
+                            let order = strat.update(&tick);
+                            println!("send: {:?}", &order);
 
-                let mut tick_buf = [0u8; std::mem::size_of::<TickData>()];
-                loop {
-                    match tick_puller.recv_into(&mut tick_buf, 0) {
-                        Ok(n) if n == tick_buf.len() => {
-                            // Reconstruct TickData from raw bytes:
-                            let tick: TickData = unsafe {
-                                let ptr = tick_buf.as_ptr() as *const TickData;
-                                std::ptr::read_unaligned(ptr)
+                            // Serialize the Order back to bytes:
+                            let bytes: &[u8] = unsafe {
+                                let ptr = &order as *const Order as *const u8;
+                                std::slice::from_raw_parts(ptr, mem::size_of::<Order>())
                             };
-
-                            // Look up that symbol’s Vec<Box<dyn Strategy>>:
-                            if let Some(strategies) = partial_map.get_mut(&tick.symbol) {
-                                // For each Box<dyn Strategy>, we have &mut Box<…>,
-                                // so we can call `update(&mut self)` directly.
-                                for strat in strategies.iter_mut() {
-                                    let order = strat.update(&tick);
-                                    println!("send: {:?}", &order);
-
-                                    // Serialize the Order back to bytes:
-                                    let bytes: &[u8] = unsafe {
-                                        let ptr = &order as *const Order as *const u8;
-                                        std::slice::from_raw_parts(ptr, mem::size_of::<Order>())
-                                    };
-                                    if let Err(e) = order_pusher.send(bytes, 0) {
-                                        eprintln!("Error sending on PUSH socket: {:?}", e);
-                                    }
-                                }
+                            if let Err(e) = order_pusher.send(bytes, 0) {
+                                eprintln!("Error sending on PUSH socket: {:?}", e);
                             }
-                        }
-                        Ok(n) => {
-                            eprintln!("Worker {}: got {} bytes (expected {}), ignoring", worker_id, n, tick_buf.len());
-                        }
-                        Err(e) => {
-                            eprintln!("Worker {}: recv error or socket closed: {:?}", worker_id, e);
-                            break;
                         }
                     }
                 }
+                println!("[Worker {}] Channel closed, exiting.", worker_id);
             });
-            self.work_handlers.push(handler);
-        }
 
-        Ok(())
+            self.handles.push(handle);
+        }
     }
 
     /// The main thread’s loop: it simply pulls raw TickData from `tick_subscriber`
-    /// and pushes each tick into the appropriate worker’s inproc PUSH.
+    /// and pushes each tick into the appropriate worker’s channel
     pub fn start(&self) {
         let mut tick_buf = [0u8; std::mem::size_of::<TickData>()];
         loop {
             match self.tick_subscriber.recv_into(&mut tick_buf, 0) {
                 Ok(n) if n == tick_buf.len() => {
-                    // Reconstruct TickData just to figure out which worker to send to:
                     let tick: TickData = unsafe {
                         let ptr = tick_buf.as_ptr() as *const TickData;
                         std::ptr::read_unaligned(ptr)
                     };
                     let worker_id = (tick.symbol.hash_future_symbol() as usize) % self.num_workers;
-                    if let Err(e) = self.work_pushers[worker_id].send(tick_buf.as_slice(), 0) {
+                    if let Err(e) = self.senders[worker_id].send(tick) {
                         eprintln!("Error sending tick to worker {}: {:?}", worker_id, e);
                     }
                 }
@@ -479,6 +327,39 @@ impl Engine {
             }
         }
     }
+
+    /// Gracefully stop all workers. Drops all `Sender`s so each worker's receiver loop ends,
+    /// then joins each thread. After calling `stop()`, you cannot `send()` any more items.
+    /// Calling `stop()` twice is a no-op.
+    pub fn stop(&mut self) {
+        if !self.started {
+            // If never started or already stopped, do nothing.
+            return;
+        }
+        self.started = false;
+
+        // Close the tick subscriber so that the start() loop exits.
+        drop(self.tick_subscriber);
+
+        // 1) Drop all senders. This closes each channel, so each `for item in rx` loop breaks.
+        self.senders.clear();
+
+        // 2) Join all worker threads.
+        for handle in self.handles.drain(..) {
+            handle.join().expect("Worker thread panicked");
+        }
+
+        println!("All worker threads have exited.");
+    }
 }
 
-fn main() {}
+fn main() {
+    let mut engine = CtaEngine::new("ipc://@hq", "ipc://@orders", 4);
+    // let stg1=Aberration::new(100);
+    engine.add_strategy(SymbolType::from("rb2505"), Box::new(Aberration::new(100)));
+    engine.add_strategy(SymbolType::from("rb2505"), Box::new(Aberration::new(200)));
+    engine.add_strategy(SymbolType::from("MA505"), Box::new(Aberration::new(300)));
+    engine.add_strategy(SymbolType::from("MA505"), Box::new(Aberration::new(400)));
+    engine.init();
+    engine.start();
+}
