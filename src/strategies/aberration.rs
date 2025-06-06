@@ -1,4 +1,3 @@
-// src/strategies/aberration.rs
 use crate::strategy::Strategy;
 use crate::types::{DirectionType, NameType, OffsetFlagType, Order, TickData};
 
@@ -19,13 +18,14 @@ impl Aberration {
 
 impl Strategy for Aberration {
     fn name(&self) -> NameType {
-        // NameType is Copy, so this just copies the array.
+        // as NameType is Copy, so it will copy here
+        // is NameType is only Clone, it will move
         self.name
     }
 
-    fn update(&self, tick: &TickData) -> Order {
-        // In a real implementation, you’d compute your MA‐based logic here.
-        // For now, we simply buy 1 lot as an example.
+    fn update(&mut self, tick: &TickData) -> Order {
+        self.ma_len += 1;
+        // do some strategy to generate order
         Order {
             stg_name: self.name,
             symbol: tick.symbol,

@@ -1,7 +1,7 @@
 use std::array;
 use std::fmt;
 
-// Alias for a 16-byte, C-style string (char[16])
+// Alias for a 16‐byte, C‐style string (char[16])
 #[repr(C)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct SymbolType(pub [u8; 16]);
@@ -15,7 +15,21 @@ impl SymbolType {
     pub fn as_str(&self) -> &str {
         // Find the first 0 byte (or use full length if none).
         let len = self.0.iter().position(|&b| b == 0).unwrap_or(self.0.len());
+        // SAFELY turn bytes[0..len] into &str (or yield empty on invalid UTF-8).
         std::str::from_utf8(&self.0[..len]).unwrap_or("")
+    }
+
+    /// If byte[0] not A–Z/a–z, return 0. Otherwise pack c0<<8 | c1 (if c1 is also a letter).
+    pub const fn hash_future_symbol(&self) -> u16 {
+        let c0 = self.0[0];
+        if !((c0 >= b'A' && c0 <= b'Z') || (c0 >= b'a' && c0 <= b'z')) {
+            return 0;
+        }
+        let c1 = self.0[1];
+        if (c1 >= b'A' && c1 <= b'Z') || (c1 >= b'a' && c1 <= b'z') {
+            return (c0 as u16) << 8 | (c1 as u16);
+        }
+        (c0 as u16) << 8
     }
 }
 
@@ -36,7 +50,9 @@ impl From<&str> for SymbolType {
 impl NameType {
     /// Interpret the bytes as a (possibly NUL-terminated) UTF-8 string.
     pub fn as_str(&self) -> &str {
+        // Find the first 0 byte (or use full length if none).
         let len = self.0.iter().position(|&b| b == 0).unwrap_or(self.0.len());
+        // SAFELY turn bytes[0..len] into &str (or yield empty on invalid UTF-8).
         std::str::from_utf8(&self.0[..len]).unwrap_or("")
     }
 }
@@ -55,7 +71,7 @@ impl From<&str> for NameType {
     }
 }
 
-/// TickData: exactly matches the C struct layout
+// TickData: exactly matches the C struct layout
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct TickData {
@@ -99,7 +115,7 @@ pub struct TickData {
     pub adj: f64,           // double adj
 }
 
-/// C “enum class DirectionType : uint8_t { NONE, BUY, SELL };”
+// C “enum class DirectionType : uint8_t { NONE, BUY, SELL };”
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DirectionType {
@@ -108,7 +124,7 @@ pub enum DirectionType {
     SELL = 2,
 }
 
-/// C “enum class OffsetFlagType : uint8_t { NONE, OPEN, CLOSE };”
+// C “enum class OffsetFlagType : uint8_t { NONE, OPEN, CLOSE };”
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum OffsetFlagType {
@@ -117,7 +133,7 @@ pub enum OffsetFlagType {
     CLOSE = 2,
 }
 
-/// Order: matches the C struct exactly, assuming NameType is char[32]
+// Order: matches the C struct exactly, assuming NameType is char[32]
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Order {
