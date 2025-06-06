@@ -5,5 +5,4 @@ edition = "2024"
 
 [dependencies]
 ctrlc = "3.4.7"
-threadpool = "1.8.1"
 zmq = { git = "https://github.com/erickt/rust-zmq", branch = "master" }
