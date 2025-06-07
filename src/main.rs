@@ -4,6 +4,7 @@ mod engine;
 mod strategy;
 mod strategies;
 mod types;
+mod config;
 
 use engine::CtaEngine;
 use strategies::Aberration;
