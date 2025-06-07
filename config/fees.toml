@@ -1,0 +1,23 @@
+['CFFEX.IF']
+open = 0.000023
+close = 0.000023
+closetoday = 0.000023
+byvolume = false
+
+['CFFEX.IC']
+open = 0.000023
+close = 0.000023
+closetoday = 0.000023
+byvolume = false
+
+['CFFEX.IH']
+open = 0.000023
+close = 0.000023
+closetoday = 0.000023
+byvolume = false
+
+["CFFEX.T"]
+open = 3.0
+close = 3.0
+closetoday = 0.0
+byvolume = true
