@@ -47,4 +47,14 @@ impl Broker {
             eprintln!("Broker failed to send order: {:?}", e);
         }
     }
+
+    pub fn charge() -> f64 {}
+
+    pub fn buy() {}
+
+    pub fn sell() {}
+
+    pub fn sell_short() {}
+
+    pub fn buy_cover() {}
 }
