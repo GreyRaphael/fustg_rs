@@ -33,27 +33,60 @@ impl Strategy for Aberration {
         let stdev = self.stdev.update(tick.last);
 
         if self.position == 0 {
-            if tick.last > ma + 2.0 * stdev {}
+            if tick.last > ma + 2.0 * stdev {
+                self.position = 1;
+                return Some(Order {
+                    stg_name: self.name,
+                    symbol: tick.symbol,
+                    timestamp: tick.stamp,
+                    volume: 1,
+                    direction: DirectionType::BUY,
+                    offset: OffsetFlagType::OPEN,
+                });
+            }
 
-            if tick.last < ma - 2.0 * stdev {}
+            if tick.last < ma - 2.0 * stdev {
+                self.position = -1;
+                return Some(Order {
+                    stg_name: self.name,
+                    symbol: tick.symbol,
+                    timestamp: tick.stamp,
+                    volume: 1,
+                    direction: DirectionType::SELL,
+                    offset: OffsetFlagType::OPEN,
+                });
+            }
         }
 
         if self.position > 0 {
-            if tick.last < ma {}
+            if tick.last < ma {
+                self.position = 0;
+                return Some(Order {
+                    stg_name: self.name,
+                    symbol: tick.symbol,
+                    timestamp: tick.stamp,
+                    volume: 1,
+                    direction: DirectionType::SELL,
+                    offset: OffsetFlagType::CLOSE,
+                });
+            }
         }
 
         if self.position < 0 {
-            if tick.last > ma {}
+            if tick.last > ma {
+                self.position = 0;
+                return Some(Order {
+                    stg_name: self.name,
+                    symbol: tick.symbol,
+                    timestamp: tick.stamp,
+                    volume: 1,
+                    direction: DirectionType::BUY,
+                    offset: OffsetFlagType::CLOSE,
+                });
+            }
         }
 
+        return None;
         // do some strategy to generate order
-        Some(Order {
-            stg_name: self.name,
-            symbol: tick.symbol,
-            timestamp: tick.stamp,
-            volume: 1,
-            direction: DirectionType::BUY,
-            offset: OffsetFlagType::OPEN,
-        })
     }
 }
