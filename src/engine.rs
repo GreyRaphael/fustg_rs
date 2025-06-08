@@ -85,16 +85,17 @@ impl CtaEngine {
                 for tick in rx {
                     if let Some(strategies) = partial_map.get_mut(&tick.symbol) {
                         for strat in strategies.iter_mut() {
-                            let order = strat.update(&tick);
-                            println!("[Worker {}] send: {:?}", worker_id, &order);
+                            if let Some(order) = strat.update(&tick) {
+                                println!("[Worker {}] send: {:?}", worker_id, &order);
 
-                            // Serialize the entire `Order` including any padding.
-                            let bytes: &[u8] = unsafe {
-                                let ptr = &order as *const Order as *const u8;
-                                std::slice::from_raw_parts(ptr, mem::size_of::<Order>())
-                            };
-                            if let Err(e) = order_pusher.send(bytes, 0) {
-                                eprintln!("Error sending on PUSH socket: {:?}", e);
+                                // Serialize the entire `Order` including any padding.
+                                let bytes: &[u8] = unsafe {
+                                    let ptr = &order as *const Order as *const u8;
+                                    std::slice::from_raw_parts(ptr, mem::size_of::<Order>())
+                                };
+                                if let Err(e) = order_pusher.send(bytes, 0) {
+                                    eprintln!("Error sending on PUSH socket: {:?}", e);
+                                }
                             }
                         }
                     }

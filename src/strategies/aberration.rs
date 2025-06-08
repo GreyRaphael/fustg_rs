@@ -1,17 +1,22 @@
+use crate::operator::rolling;
 use crate::strategy::Strategy;
 use crate::types::{DirectionType, NameType, OffsetFlagType, Order, TickData};
 
 pub struct Aberration {
-    ma_len: u32,
+    ma: rolling::Mean,
+    stdev: rolling::StDev,
     name: NameType,
+    position: i32,
 }
 
 impl Aberration {
-    pub fn new(ma_len: u32) -> Self {
+    pub fn new(ma_len: usize) -> Self {
         let full_str = format!("Aberration{}", ma_len);
         Self {
-            ma_len,
+            ma: rolling::Mean::new(ma_len),
+            stdev: rolling::StDev::new(ma_len),
             name: NameType::from(full_str.as_str()),
+            position: 0,
         }
     }
 }
@@ -23,16 +28,32 @@ impl Strategy for Aberration {
         self.name
     }
 
-    fn update(&mut self, tick: &TickData) -> Order {
-        self.ma_len += 1;
+    fn update(&mut self, tick: &TickData) -> Option<Order> {
+        let ma = self.ma.update(tick.last);
+        let stdev = self.stdev.update(tick.last);
+
+        if self.position == 0 {
+            if tick.last > ma + 2.0 * stdev {}
+
+            if tick.last < ma - 2.0 * stdev {}
+        }
+
+        if self.position > 0 {
+            if tick.last < ma {}
+        }
+
+        if self.position < 0 {
+            if tick.last > ma {}
+        }
+
         // do some strategy to generate order
-        Order {
+        Some(Order {
             stg_name: self.name,
             symbol: tick.symbol,
             timestamp: tick.stamp,
             volume: 1,
             direction: DirectionType::BUY,
             offset: OffsetFlagType::OPEN,
-        }
+        })
     }
 }
