@@ -1,16 +1,19 @@
 use ctrlc;
 
-mod engine;
-mod strategy;
-mod strategies;
-mod types;
-mod config;
-mod operator;
 mod broker;
+mod config;
+mod engine;
+mod operator;
+mod perf_tracker;
+mod strategies;
+mod strategy;
+mod types;
 
 use engine::CtaEngine;
 use strategies::Aberration;
 use types::SymbolType;
+
+use crate::perf_tracker::PerformanceTracker;
 
 fn main() {
     // Register a Ctrl-C handler that just flips `running` to false.
@@ -25,10 +28,26 @@ fn main() {
     let mut engine = CtaEngine::new("ipc://@hq", "ipc://@orders", 4);
 
     // Add some strategies
-    engine.add_strategy(SymbolType::from("rb2505"), Box::new(Aberration::new(100)));
-    engine.add_strategy(SymbolType::from("rb2505"), Box::new(Aberration::new(200)));
-    engine.add_strategy(SymbolType::from("MA505"), Box::new(Aberration::new(300)));
-    engine.add_strategy(SymbolType::from("MA505"), Box::new(Aberration::new(400)));
+    engine.add_strategy(
+        SymbolType::from("rb2505"),
+        Box::new(Aberration::new(100)),
+        PerformanceTracker::new(1e6, 1e-4),
+    );
+    engine.add_strategy(
+        SymbolType::from("rb2505"),
+        Box::new(Aberration::new(200)),
+        PerformanceTracker::new(1e6, 1e-4),
+    );
+    engine.add_strategy(
+        SymbolType::from("MA505"),
+        Box::new(Aberration::new(300)),
+        PerformanceTracker::new(1e6, 1e-4),
+    );
+    engine.add_strategy(
+        SymbolType::from("MA505"),
+        Box::new(Aberration::new(400)),
+        PerformanceTracker::new(1e6, 1e-4),
+    );
 
     // Initialize worker threads, then enter the receive loop.
     engine.init();

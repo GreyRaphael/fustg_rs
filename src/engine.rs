@@ -1,9 +1,15 @@
+use crate::perf_tracker::PerformanceTracker;
 use crate::strategy::Strategy;
 use crate::types::{Order, SymbolType, TickData};
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc;
 use std::{mem, thread};
 use zmq;
+
+struct StratPerf {
+    stg: Box<dyn Strategy>,
+    perf: PerformanceTracker,
+}
 
 pub struct CtaEngine {
     num_workers: usize,
@@ -15,7 +21,7 @@ pub struct CtaEngine {
     /// which causes the blocking `recv_into` to return an error.
     tick_subscriber: Option<zmq::Socket>,
 
-    stg_map: HashMap<SymbolType, Vec<Box<dyn Strategy>>>,
+    stg_map: HashMap<SymbolType, Vec<StratPerf>>,
     symbol_batches: Vec<HashSet<SymbolType>>,
     order_uri: String,
 }
@@ -43,7 +49,7 @@ impl CtaEngine {
 
     /// Register a strategy for a given symbol.  We store it in stg_map as a
     /// Box<dyn Strategy>.  It will not be shared—only one worker thread gets it.
-    pub fn add_strategy(&mut self, symbol: SymbolType, strategy: Box<dyn Strategy>) {
+    pub fn add_strategy(&mut self, symbol: SymbolType, strategy: Box<dyn Strategy>, performance_tracker: PerformanceTracker) {
         // If it's the first time seeing `symbol`, subscribe
         if self.stg_map.get(&symbol).is_none() {
             if let Some(ref sock) = self.tick_subscriber {
@@ -51,7 +57,10 @@ impl CtaEngine {
             }
         }
         // Push into stg_map (we’ll later drain each Vec into a worker).
-        self.stg_map.entry(symbol).or_insert_with(Vec::new).push(strategy);
+        self.stg_map.entry(symbol).or_insert_with(Vec::new).push(StratPerf {
+            stg: strategy,
+            perf: performance_tracker,
+        });
 
         // Figure out which worker “owns” this symbol (and all its strategies):
         let worker_id = (symbol.hash_future_symbol() as usize) % self.num_workers;
@@ -62,7 +71,7 @@ impl CtaEngine {
     pub fn init(&mut self) {
         for worker_id in 0..self.num_workers {
             // Build this worker’s partial_map from `symbol_batches[worker_id]`.
-            let mut partial_map: HashMap<_, _> = self.symbol_batches[worker_id]
+            let mut partial_stg_map: HashMap<_, _> = self.symbol_batches[worker_id]
                 .iter()
                 .copied()
                 .filter_map(|sym| self.stg_map.remove(&sym).map(|v| (sym, v)))
@@ -83,9 +92,9 @@ impl CtaEngine {
                 order_pusher.connect(&order_uri).expect("Failed to connect PUSH to order_uri");
 
                 for tick in rx {
-                    if let Some(strategies) = partial_map.get_mut(&tick.symbol) {
-                        for strat in strategies.iter_mut() {
-                            if let Some(order) = strat.update(&tick) {
+                    if let Some(strategies) = partial_stg_map.get_mut(&tick.symbol) {
+                        for strat_perf in strategies.iter_mut() {
+                            if let Some(order) = strat_perf.stg.update(&tick) {
                                 println!("[Worker {}] send: {:?}", worker_id, &order);
 
                                 // Serialize the entire `Order` including any padding.
@@ -96,7 +105,10 @@ impl CtaEngine {
                                 if let Err(e) = order_pusher.send(bytes, 0) {
                                     eprintln!("Error sending on PUSH socket: {:?}", e);
                                 }
+
+                                strat_perf.perf.on_fill(&order);
                             }
+                            strat_perf.perf.on_tick_end(&tick);
                         }
                     }
                 }
