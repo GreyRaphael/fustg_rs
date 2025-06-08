@@ -1,3 +1,4 @@
+use crate::types::Order;
 use std::mem;
 use zmq;
 
@@ -48,7 +49,9 @@ impl Broker {
         }
     }
 
-    pub fn charge() -> f64 {}
+    pub fn charge() -> f64 {
+        1e-4
+    }
 
     pub fn buy() {}
 
