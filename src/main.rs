@@ -5,6 +5,8 @@ mod strategy;
 mod strategies;
 mod types;
 mod config;
+mod operator;
+mod broker;
 
 use engine::CtaEngine;
 use strategies::Aberration;
