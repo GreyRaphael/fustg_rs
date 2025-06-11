@@ -1,6 +1,5 @@
 use ctrlc;
 
-mod broker;
 mod config;
 mod engine;
 mod operator;
