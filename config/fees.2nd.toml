@@ -1,0 +1,1161 @@
+["CFFEX.IC"]
+contract_multiplier = 200
+min_move = 0.2
+open_fee_rate = 2.4e-5
+open_fee_fixed = 0.01
+close_fee_rate = 2.4e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000231
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.12
+long_margin_fixed = 0.0
+short_margin_rate = 0.12
+short_margin_fixed = 0.0
+
+["CFFEX.IF"]
+contract_multiplier = 300
+min_move = 0.2
+open_fee_rate = 2.4e-5
+open_fee_fixed = 0.01
+close_fee_rate = 2.4e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000231
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.12
+long_margin_fixed = 0.0
+short_margin_rate = 0.12
+short_margin_fixed = 0.0
+
+["CFFEX.IH"]
+contract_multiplier = 300
+min_move = 0.2
+open_fee_rate = 2.4e-5
+open_fee_fixed = 0.01
+close_fee_rate = 2.4e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000231
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.12
+long_margin_fixed = 0.0
+short_margin_rate = 0.12
+short_margin_fixed = 0.0
+
+["CFFEX.IM"]
+contract_multiplier = 200
+min_move = 0.2
+open_fee_rate = 2.4e-5
+open_fee_fixed = 0.01
+close_fee_rate = 2.4e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000231
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.12
+long_margin_fixed = 0.0
+short_margin_rate = 0.12
+short_margin_fixed = 0.0
+
+["CFFEX.T"]
+contract_multiplier = 10000
+min_move = 0.005
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.02
+long_margin_fixed = 0.0
+short_margin_rate = 0.02
+short_margin_fixed = 0.0
+
+["CFFEX.TF"]
+contract_multiplier = 10000
+min_move = 0.005
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.012
+long_margin_fixed = 0.0
+short_margin_rate = 0.012
+short_margin_fixed = 0.0
+
+["CFFEX.TL"]
+contract_multiplier = 10000
+min_move = 0.01
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.035
+long_margin_fixed = 0.0
+short_margin_rate = 0.035
+short_margin_fixed = 0.0
+
+["CFFEX.TS"]
+contract_multiplier = 20000
+min_move = 0.002
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.005
+long_margin_fixed = 0.0
+short_margin_rate = 0.005
+short_margin_fixed = 0.0
+
+["CZCE.AP"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 5.01
+close_fee_rate = 1e-6
+close_fee_fixed = 5.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 20.01
+long_margin_rate = 0.1
+long_margin_fixed = 0.0
+short_margin_rate = 0.1
+short_margin_fixed = 0.0
+
+["CZCE.CF"]
+contract_multiplier = 5
+min_move = 5.0
+open_fee_rate = 1e-6
+open_fee_fixed = 4.31
+close_fee_rate = 1e-6
+close_fee_fixed = 4.31
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["CZCE.CJ"]
+contract_multiplier = 5
+min_move = 5.0
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 3.01
+long_margin_rate = 0.1
+long_margin_fixed = 0.0
+short_margin_rate = 0.1
+short_margin_fixed = 0.0
+
+["CZCE.CY"]
+contract_multiplier = 5
+min_move = 5.0
+open_fee_rate = 1e-6
+open_fee_fixed = 1.01
+close_fee_rate = 1e-6
+close_fee_fixed = 1.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.15
+long_margin_fixed = 0.0
+short_margin_rate = 0.15
+short_margin_fixed = 0.0
+
+["CZCE.FG"]
+contract_multiplier = 20
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 6.01
+close_fee_rate = 1e-6
+close_fee_fixed = 6.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 6.01
+long_margin_rate = 0.1
+long_margin_fixed = 0.0
+short_margin_rate = 0.1
+short_margin_fixed = 0.0
+
+["CZCE.JR"]
+contract_multiplier = 20
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 3.01
+long_margin_rate = 0.25
+long_margin_fixed = 0.0
+short_margin_rate = 0.25
+short_margin_fixed = 0.0
+
+["CZCE.LR"]
+contract_multiplier = 20
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 3.01
+long_margin_rate = 0.25
+long_margin_fixed = 0.0
+short_margin_rate = 0.25
+short_margin_fixed = 0.0
+
+["CZCE.MA"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 0.000101
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000101
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.08
+long_margin_fixed = 0.0
+short_margin_rate = 0.08
+short_margin_fixed = 0.0
+
+["CZCE.OI"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 2.01
+close_fee_rate = 1e-6
+close_fee_fixed = 2.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 2.01
+long_margin_rate = 0.09
+long_margin_fixed = 0.0
+short_margin_rate = 0.09
+short_margin_fixed = 0.0
+
+["CZCE.PF"]
+contract_multiplier = 5
+min_move = 2.0
+open_fee_rate = 1e-6
+open_fee_fixed = 2.01
+close_fee_rate = 1e-6
+close_fee_fixed = 2.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["CZCE.PK"]
+contract_multiplier = 5
+min_move = 2.0
+open_fee_rate = 1e-6
+open_fee_fixed = 4.01
+close_fee_rate = 1e-6
+close_fee_fixed = 4.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 4.01
+long_margin_rate = 0.08
+long_margin_fixed = 0.0
+short_margin_rate = 0.08
+short_margin_fixed = 0.0
+
+["CZCE.PM"]
+contract_multiplier = 50
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 30.01
+close_fee_rate = 1e-6
+close_fee_fixed = 30.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 30.01
+long_margin_rate = 0.4
+long_margin_fixed = 0.0
+short_margin_rate = 0.4
+short_margin_fixed = 0.0
+
+["CZCE.PR"]
+contract_multiplier = 15
+min_move = 2.0
+open_fee_rate = 5.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 5.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["CZCE.PX"]
+contract_multiplier = 5
+min_move = 2.0
+open_fee_rate = 0.000101
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.08
+long_margin_fixed = 0.0
+short_margin_rate = 0.08
+short_margin_fixed = 0.0
+
+["CZCE.RI"]
+contract_multiplier = 20
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 2.51
+close_fee_rate = 1e-6
+close_fee_fixed = 2.51
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 2.51
+long_margin_rate = 0.25
+long_margin_fixed = 0.0
+short_margin_rate = 0.25
+short_margin_fixed = 0.0
+
+["CZCE.RM"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 1.51
+close_fee_rate = 1e-6
+close_fee_fixed = 1.51
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 1.51
+long_margin_rate = 0.1
+long_margin_fixed = 0.0
+short_margin_rate = 0.1
+short_margin_fixed = 0.0
+
+["CZCE.RS"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 2.01
+close_fee_rate = 1e-6
+close_fee_fixed = 2.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 2.01
+long_margin_rate = 0.4
+long_margin_fixed = 0.0
+short_margin_rate = 0.4
+short_margin_fixed = 0.0
+
+["CZCE.SA"]
+contract_multiplier = 20
+min_move = 1.0
+open_fee_rate = 0.000201
+open_fee_fixed = 0.01
+close_fee_rate = 0.000201
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000201
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.09
+long_margin_fixed = 0.0
+short_margin_rate = 0.09
+short_margin_fixed = 0.0
+
+["CZCE.SF"]
+contract_multiplier = 5
+min_move = 2.0
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.08
+long_margin_fixed = 0.0
+short_margin_rate = 0.08
+short_margin_fixed = 0.0
+
+["CZCE.SH"]
+contract_multiplier = 30
+min_move = 1.0
+open_fee_rate = 0.000101
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.08
+long_margin_fixed = 0.0
+short_margin_rate = 0.08
+short_margin_fixed = 0.0
+
+["CZCE.SM"]
+contract_multiplier = 5
+min_move = 2.0
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.09
+long_margin_fixed = 0.0
+short_margin_rate = 0.09
+short_margin_fixed = 0.0
+
+["CZCE.SR"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["CZCE.TA"]
+contract_multiplier = 5
+min_move = 2.0
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["CZCE.UR"]
+contract_multiplier = 20
+min_move = 1.0
+open_fee_rate = 0.000101
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000101
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.08
+long_margin_fixed = 0.0
+short_margin_rate = 0.08
+short_margin_fixed = 0.0
+
+["CZCE.WH"]
+contract_multiplier = 20
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 30.01
+close_fee_rate = 1e-6
+close_fee_fixed = 30.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 30.01
+long_margin_rate = 0.4
+long_margin_fixed = 0.0
+short_margin_rate = 0.4
+short_margin_fixed = 0.0
+
+["CZCE.ZC"]
+contract_multiplier = 100
+min_move = 0.2
+open_fee_rate = 1e-6
+open_fee_fixed = 150.01
+close_fee_rate = 1e-6
+close_fee_fixed = 150.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 150.01
+long_margin_rate = 0.5
+long_margin_fixed = 0.0
+short_margin_rate = 0.5
+short_margin_fixed = 0.0
+
+["DCE.a"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 2.01
+close_fee_rate = 1e-6
+close_fee_fixed = 2.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 2.01
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["DCE.b"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 1.01
+close_fee_rate = 1e-6
+close_fee_fixed = 1.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 1.01
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["DCE.bb"]
+contract_multiplier = 500
+min_move = 0.05
+open_fee_rate = 0.000101
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000101
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.4
+long_margin_fixed = 0.0
+short_margin_rate = 0.4
+short_margin_fixed = 0.0
+
+["DCE.c"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 1.21
+close_fee_rate = 1e-6
+close_fee_fixed = 1.21
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 1.21
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["DCE.cs"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 1.51
+close_fee_rate = 1e-6
+close_fee_fixed = 1.51
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 1.51
+long_margin_rate = 0.06
+long_margin_fixed = 0.0
+short_margin_rate = 0.06
+short_margin_fixed = 0.0
+
+["DCE.eb"]
+contract_multiplier = 5
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 3.01
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["DCE.eg"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 3.01
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["DCE.fb"]
+contract_multiplier = 10
+min_move = 0.5
+open_fee_rate = 0.000101
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000101
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.25
+long_margin_fixed = 0.0
+short_margin_rate = 0.25
+short_margin_fixed = 0.0
+
+["DCE.i"]
+contract_multiplier = 100
+min_move = 0.5
+open_fee_rate = 0.000101
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000101
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.11
+long_margin_fixed = 0.0
+short_margin_rate = 0.11
+short_margin_fixed = 0.0
+
+["DCE.j"]
+contract_multiplier = 100
+min_move = 0.5
+open_fee_rate = 0.000141
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000141
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.2
+long_margin_fixed = 0.0
+short_margin_rate = 0.2
+short_margin_fixed = 0.0
+
+["DCE.jd"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 0.000151
+open_fee_fixed = 0.01
+close_fee_rate = 0.000151
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000151
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["DCE.jm"]
+contract_multiplier = 60
+min_move = 0.5
+open_fee_rate = 0.000101
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000101
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.12
+long_margin_fixed = 0.0
+short_margin_rate = 0.12
+short_margin_fixed = 0.0
+
+["DCE.l"]
+contract_multiplier = 5
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 1.01
+close_fee_rate = 1e-6
+close_fee_fixed = 1.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 1.01
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["DCE.lg"]
+contract_multiplier = 90
+min_move = 0.5
+open_fee_rate = 0.000101
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000101
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.08
+long_margin_fixed = 0.0
+short_margin_rate = 0.08
+short_margin_fixed = 0.0
+
+["DCE.lh"]
+contract_multiplier = 16
+min_move = 5.0
+open_fee_rate = 0.000201
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000201
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.08
+long_margin_fixed = 0.0
+short_margin_rate = 0.08
+short_margin_fixed = 0.0
+
+["DCE.m"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 1.51
+close_fee_rate = 1e-6
+close_fee_fixed = 1.51
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 1.51
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["DCE.p"]
+contract_multiplier = 10
+min_move = 2.0
+open_fee_rate = 1e-6
+open_fee_fixed = 2.51
+close_fee_rate = 1e-6
+close_fee_fixed = 2.51
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 2.51
+long_margin_rate = 0.08
+long_margin_fixed = 0.0
+short_margin_rate = 0.08
+short_margin_fixed = 0.0
+
+["DCE.pg"]
+contract_multiplier = 20
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 6.01
+close_fee_rate = 1e-6
+close_fee_fixed = 6.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 6.01
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["DCE.pp"]
+contract_multiplier = 5
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 1.01
+close_fee_rate = 1e-6
+close_fee_fixed = 1.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 1.01
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["DCE.rr"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 1.01
+close_fee_rate = 1e-6
+close_fee_fixed = 1.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 1.01
+long_margin_rate = 0.06
+long_margin_fixed = 0.0
+short_margin_rate = 0.06
+short_margin_fixed = 0.0
+
+["DCE.v"]
+contract_multiplier = 5
+min_move = 1.0
+open_fee_rate = 1e-6
+open_fee_fixed = 1.01
+close_fee_rate = 1e-6
+close_fee_fixed = 1.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 1.01
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["DCE.y"]
+contract_multiplier = 10
+min_move = 2.0
+open_fee_rate = 1e-6
+open_fee_fixed = 2.51
+close_fee_rate = 1e-6
+close_fee_fixed = 2.51
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 2.51
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["GFEX.lc"]
+contract_multiplier = 1
+min_move = 20.0
+open_fee_rate = 8.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 8.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.1
+long_margin_fixed = 0.0
+short_margin_rate = 0.1
+short_margin_fixed = 0.0
+
+["GFEX.ps"]
+contract_multiplier = 3
+min_move = 5.0
+open_fee_rate = 0.000101
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000101
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.09
+long_margin_fixed = 0.0
+short_margin_rate = 0.09
+short_margin_fixed = 0.0
+
+["GFEX.si"]
+contract_multiplier = 5
+min_move = 5.0
+open_fee_rate = 0.000101
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.08
+long_margin_fixed = 0.0
+short_margin_rate = 0.08
+short_margin_fixed = 0.0
+
+["INE.bc"]
+contract_multiplier = 5
+min_move = 10.0
+open_fee_rate = 1.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 1.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.09
+long_margin_fixed = 0.0
+short_margin_rate = 0.09
+short_margin_fixed = 0.0
+
+["INE.ec"]
+contract_multiplier = 50
+min_move = 0.1
+open_fee_rate = 0.000601
+open_fee_fixed = 0.01
+close_fee_rate = 0.000601
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.001201
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.29
+long_margin_fixed = 0.0
+short_margin_rate = 0.29
+short_margin_fixed = 0.0
+
+["INE.lu"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 1.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 1.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 1.1e-5
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.11
+long_margin_fixed = 0.0
+short_margin_rate = 0.11
+short_margin_fixed = 0.0
+
+["INE.nr"]
+contract_multiplier = 10
+min_move = 5.0
+open_fee_rate = 2.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 2.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.1
+long_margin_fixed = 0.0
+short_margin_rate = 0.1
+short_margin_fixed = 0.0
+
+["INE.sc"]
+contract_multiplier = 1000
+min_move = 0.1
+open_fee_rate = 1e-6
+open_fee_fixed = 20.01
+close_fee_rate = 1e-6
+close_fee_fixed = 20.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.11
+long_margin_fixed = 0.0
+short_margin_rate = 0.11
+short_margin_fixed = 0.0
+
+["SHFE.ad"]
+contract_multiplier = 10
+min_move = 5.0
+open_fee_rate = 0.000101
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000101
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.09
+long_margin_fixed = 0.0
+short_margin_rate = 0.09
+short_margin_fixed = 0.0
+
+["SHFE.ag"]
+contract_multiplier = 15
+min_move = 1.0
+open_fee_rate = 1.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 1.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 1.1e-5
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.14
+long_margin_fixed = 0.0
+short_margin_rate = 0.14
+short_margin_fixed = 0.0
+
+["SHFE.al"]
+contract_multiplier = 5
+min_move = 5.0
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 3.01
+long_margin_rate = 0.09
+long_margin_fixed = 0.0
+short_margin_rate = 0.09
+short_margin_fixed = 0.0
+
+["SHFE.ao"]
+contract_multiplier = 20
+min_move = 1.0
+open_fee_rate = 0.000101
+open_fee_fixed = 0.01
+close_fee_rate = 0.000101
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000101
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.11
+long_margin_fixed = 0.0
+short_margin_rate = 0.11
+short_margin_fixed = 0.0
+
+["SHFE.au"]
+contract_multiplier = 1000
+min_move = 0.02
+open_fee_rate = 1e-6
+open_fee_fixed = 10.01
+close_fee_rate = 1e-6
+close_fee_fixed = 10.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.14
+long_margin_fixed = 0.0
+short_margin_rate = 0.14
+short_margin_fixed = 0.0
+
+["SHFE.br"]
+contract_multiplier = 5
+min_move = 5.0
+open_fee_rate = 2.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 2.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 2.1e-5
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.11
+long_margin_fixed = 0.0
+short_margin_rate = 0.11
+short_margin_fixed = 0.0
+
+["SHFE.bu"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 5.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 5.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.11
+long_margin_fixed = 0.0
+short_margin_rate = 0.11
+short_margin_fixed = 0.0
+
+["SHFE.cu"]
+contract_multiplier = 5
+min_move = 10.0
+open_fee_rate = 5.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 5.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 0.000101
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.09
+long_margin_fixed = 0.0
+short_margin_rate = 0.09
+short_margin_fixed = 0.0
+
+["SHFE.fu"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 1.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 1.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.11
+long_margin_fixed = 0.0
+short_margin_rate = 0.11
+short_margin_fixed = 0.0
+
+["SHFE.hc"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 2.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 2.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 2.1e-5
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["SHFE.ni"]
+contract_multiplier = 1
+min_move = 10.0
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 3.01
+long_margin_rate = 0.12
+long_margin_fixed = 0.0
+short_margin_rate = 0.12
+short_margin_fixed = 0.0
+
+["SHFE.pb"]
+contract_multiplier = 5
+min_move = 5.0
+open_fee_rate = 4.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 4.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.09
+long_margin_fixed = 0.0
+short_margin_rate = 0.09
+short_margin_fixed = 0.0
+
+["SHFE.rb"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 2.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 2.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 2.1e-5
+close_today_fee_fixed = 0.01
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["SHFE.ru"]
+contract_multiplier = 10
+min_move = 5.0
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.1
+long_margin_fixed = 0.0
+short_margin_rate = 0.1
+short_margin_fixed = 0.0
+
+["SHFE.sn"]
+contract_multiplier = 1
+min_move = 10.0
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 3.01
+long_margin_rate = 0.12
+long_margin_fixed = 0.0
+short_margin_rate = 0.12
+short_margin_fixed = 0.0
+
+["SHFE.sp"]
+contract_multiplier = 10
+min_move = 2.0
+open_fee_rate = 5.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 5.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.1
+long_margin_fixed = 0.0
+short_margin_rate = 0.1
+short_margin_fixed = 0.0
+
+["SHFE.ss"]
+contract_multiplier = 5
+min_move = 5.0
+open_fee_rate = 1e-6
+open_fee_fixed = 2.01
+close_fee_rate = 1e-6
+close_fee_fixed = 2.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.07
+long_margin_fixed = 0.0
+short_margin_rate = 0.07
+short_margin_fixed = 0.0
+
+["SHFE.wr"]
+contract_multiplier = 10
+min_move = 1.0
+open_fee_rate = 4.1e-5
+open_fee_fixed = 0.01
+close_fee_rate = 4.1e-5
+close_fee_fixed = 0.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.09
+long_margin_fixed = 0.0
+short_margin_rate = 0.09
+short_margin_fixed = 0.0
+
+["SHFE.zn"]
+contract_multiplier = 5
+min_move = 5.0
+open_fee_rate = 1e-6
+open_fee_fixed = 3.01
+close_fee_rate = 1e-6
+close_fee_fixed = 3.01
+close_today_fee_rate = 1e-6
+close_today_fee_fixed = 0.0
+long_margin_rate = 0.09
+long_margin_fixed = 0.0
+short_margin_rate = 0.09
+short_margin_fixed = 0.0

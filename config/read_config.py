@@ -2,7 +2,12 @@ import polars as pl
 import toml
 
 
-def read_fee(out_filename: str = "contracts.toml"):
+def read_fee(out_filename: str = "contracts.toml", rank: int = 1):
+    """
+    rank = 1 表示持仓量第1的主力合约
+    rank = 2 表示持仓量第2的次主力合约
+    rank = N 表示持仓量第N的合约
+    """
     df = (
         pl.read_excel(
             "http://openctp.cn/fees.xls",
@@ -43,13 +48,13 @@ def read_fee(out_filename: str = "contracts.toml"):
                 "持仓量": pl.Float64,
             },
         )
-        .sort("持仓量")
-        .group_by("品种代码")
-        .last()  # 为了方便，使用主力合约费率
-        .select(pl.exclude("持仓量"))
+        .with_columns(pl.col("持仓量").rank(method="ordinal", descending=True).over("品种代码").alias("rnk"))
+        .filter(pl.col("rnk") == rank)  # 主力合约hot rank=1, 次主力rank=2
+        .select(pl.exclude("持仓量", "rnk"))
         .rename(
             {
                 "交易所": "ex",
+                # "合约代码": "code",
                 "品种代码": "product_id",
                 "合约乘数": "contract_multiplier",
                 "最小跳动": "min_move",
@@ -79,4 +84,5 @@ def read_fee(out_filename: str = "contracts.toml"):
 
 
 if __name__ == "__main__":
-    read_fee()
+    read_fee(out_filename="fees.1st.toml", rank=1)
+    read_fee(out_filename="fees.2nd.toml", rank=2)
