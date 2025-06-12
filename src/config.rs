@@ -10,8 +10,29 @@ struct InstrumentFee {
     byvolume: bool,
 }
 
+#[derive(Debug, Deserialize, PartialEq)]
+struct ContractInfo {
+    contract_multiplier: f64,
+    min_move: f64,
+    // open fee
+    open_fee_rate: f64,
+    open_fee_fixed: f64,
+    // close fee
+    close_fee_rate: f64,
+    close_fee_fixed: f64,
+    // close today fee
+    close_today_fee_rate: f64,
+    close_today_fee_fixed: f64,
+    // long margin
+    long_margin_rate: f64,
+    long_margin_fixed: f64,
+    // short margin
+    short_margin_rate: f64,
+    short_margin_fixed: f64,
+}
+
 /// Read `path` and parse it in one go.
-pub fn load_fees<P: AsRef<Path>>(path: P) -> Result<HashMap<String, InstrumentFee>> {
+pub fn load_fees<P: AsRef<Path>>(path: P) -> Result<HashMap<String, ContractInfo>> {
     // `?` will automatically convert both io::Error and toml::de::Error
     let s = fs::read_to_string(path)?;
     let map = toml::from_str(&s)?;
@@ -45,7 +66,12 @@ mod tests {
         assert_eq!(map.len(), 2);
         assert_eq!(
             map.get("CFFEX.IF").unwrap(),
-            &InstrumentFee { open: 100.0, close: 102.5, closetoday: 101.5, byvolume: true }
+            &InstrumentFee {
+                open: 100.0,
+                close: 102.5,
+                closetoday: 101.5,
+                byvolume: true
+            }
         );
     }
 }
