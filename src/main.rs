@@ -12,7 +12,8 @@ use engine::CtaEngine;
 use strategies::Aberration;
 use types::SymbolType;
 
-use crate::perf_tracker::PerformanceTracker;
+use config::load_fees;
+use perf_tracker::PerformanceTracker;
 
 fn main() {
     // Register a Ctrl-C handler that just flips `running` to false.
@@ -26,27 +27,30 @@ fn main() {
     // Build the engine, passing in the shared flag
     let mut engine = CtaEngine::new("ipc://@hq", "ipc://@orders", 4);
 
+    let mut contracts = load_fees("config/fees.1st.toml").expect("load fees toml success");
+
     // Add some strategies
-    engine.add_strategy(
-        SymbolType::from("rb2505"),
-        Box::new(Aberration::new(100)),
-        PerformanceTracker::new(1e6, 1e-4),
-    );
-    engine.add_strategy(
-        SymbolType::from("rb2505"),
-        Box::new(Aberration::new(200)),
-        PerformanceTracker::new(1e6, 1e-4),
-    );
-    engine.add_strategy(
-        SymbolType::from("MA505"),
-        Box::new(Aberration::new(300)),
-        PerformanceTracker::new(1e6, 1e-4),
-    );
-    engine.add_strategy(
-        SymbolType::from("MA505"),
-        Box::new(Aberration::new(400)),
-        PerformanceTracker::new(1e6, 1e-4),
-    );
+    if let Some(contract) = contracts.remove("SHFE.rb") {
+        engine.add_strategy(
+            SymbolType::from("rb2505"),
+            Box::new(Aberration::new(100)),
+            PerformanceTracker::new(1e6, 1e-4, contract),
+        );
+    }
+    if let Some(contract) = contracts.remove("CZCE.MA") {
+        engine.add_strategy(
+            SymbolType::from("MA505"),
+            Box::new(Aberration::new(200)),
+            PerformanceTracker::new(1e6, 1e-4, contract),
+        );
+    }
+    if let Some(contract) = contracts.remove("CZCE.MA") {
+        engine.add_strategy(
+            SymbolType::from("MA505"),
+            Box::new(Aberration::new(300)),
+            PerformanceTracker::new(1e6, 1e-4, contract),
+        );
+    }
 
     // Initialize worker threads, then enter the receive loop.
     engine.init();

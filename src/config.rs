@@ -10,25 +10,25 @@ struct InstrumentFee {
     byvolume: bool,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
-struct ContractInfo {
-    contract_multiplier: f64,
-    min_move: f64,
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq)]
+pub struct ContractInfo {
+    pub multiplier: f64,
+    pub min_move: f64,
     // open fee
-    open_fee_rate: f64,
-    open_fee_fixed: f64,
+    pub open_fee_rate: f64,
+    pub open_fee_fixed: f64,
     // close fee
-    close_fee_rate: f64,
-    close_fee_fixed: f64,
+    pub close_fee_rate: f64,
+    pub close_fee_fixed: f64,
     // close today fee
-    close_today_fee_rate: f64,
-    close_today_fee_fixed: f64,
+    pub close_today_fee_rate: f64,
+    pub close_today_fee_fixed: f64,
     // long margin
-    long_margin_rate: f64,
-    long_margin_fixed: f64,
+    pub long_margin_rate: f64,
+    pub long_margin_fixed: f64,
     // short margin
-    short_margin_rate: f64,
-    short_margin_fixed: f64,
+    pub short_margin_rate: f64,
+    pub short_margin_fixed: f64,
 }
 
 /// Read `path` and parse it in one go.

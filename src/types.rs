@@ -119,18 +119,16 @@ pub struct TickData {
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum DirectionType {
-    NONE = 0,
-    BUY = 1,
-    SELL = 2,
+    BUY = 0,
+    SELL = 1,
 }
 
 // C “enum class OffsetFlagType : uint8_t { NONE, OPEN, CLOSE };”
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum OffsetFlagType {
-    NONE = 0,
-    OPEN = 1,
-    CLOSE = 2,
+    OPEN = 0,
+    CLOSE = 1,
 }
 
 // Order: matches the C struct exactly, assuming NameType is char[32]
