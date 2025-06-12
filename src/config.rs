@@ -74,4 +74,13 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn parse_file() {
+        // test use crate root as working directory
+        println!("Current dir: {:?}", std::env::current_dir().unwrap());
+        let map = load_fees("config/fees.2nd.toml").expect("parse should succeed");
+        assert_eq!(map.len(), 83);
+        // println!("{:?}", map);
+    }
 }
