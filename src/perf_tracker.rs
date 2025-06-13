@@ -122,9 +122,6 @@ impl PerformanceTracker {
                     // 释放对应保证金
                     let released_margin = pos.reduce(order.lots, price, margin_rate, margin_fixed, self.contract_info.multiplier);
                     self.available_cash += released_margin;
-                    if pos.lots == 0 {
-                        self.positions.remove(&order.direction);
-                    }
                 }
             }
         }
@@ -138,6 +135,9 @@ impl PerformanceTracker {
         let mut total_margin = 0.0;
 
         for (&direction, pos) in &self.positions {
+            if pos.lots == 0 {
+                continue;
+            }
             total_unreal += pos.unrealized_pnl(tick.last, self.contract_info.multiplier, direction);
             total_margin += pos.margin;
         }
