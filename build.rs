@@ -1,8 +1,5 @@
 // build.rs
-use std::{
-    env, fs,
-    path::{Path, PathBuf},
-};
+use std::{env, fs, path::PathBuf};
 
 fn main() {
     // 1. Tell Cargo when to re-run this script…
