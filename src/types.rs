@@ -7,7 +7,7 @@ use std::fmt;
 pub struct SymbolType(pub [u8; 16]);
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone,Hash)]
 pub struct NameType(pub [u8; 32]);
 
 impl SymbolType {
@@ -117,7 +117,7 @@ pub struct TickData {
 
 // C “enum class DirectionType : uint8_t { NONE, BUY, SELL };”
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum DirectionType {
     BUY = 0,
     SELL = 1,
@@ -125,7 +125,7 @@ pub enum DirectionType {
 
 // C “enum class OffsetFlagType : uint8_t { NONE, OPEN, CLOSE };”
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum OffsetFlagType {
     OPEN = 0,
     CLOSE = 1,
@@ -133,7 +133,7 @@ pub enum OffsetFlagType {
 
 // Order: matches the C struct exactly, assuming NameType is char[32]
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash)]
 pub struct Order {
     pub stg_name: NameType,       // NameType stg_name;
     pub symbol: SymbolType,       // SymbolType symbol;

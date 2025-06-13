@@ -34,21 +34,21 @@ fn main() {
         engine.add_strategy(
             SymbolType::from("rb2505"),
             Box::new(Aberration::new(100)),
-            PerformanceTracker::new(1e6, 1e-4, contract),
+            PerformanceTracker::new(1e6, contract),
         );
     }
     if let Some(contract) = contracts.remove("CZCE.MA") {
         engine.add_strategy(
             SymbolType::from("MA505"),
             Box::new(Aberration::new(200)),
-            PerformanceTracker::new(1e6, 1e-4, contract),
+            PerformanceTracker::new(1e6, contract),
         );
     }
     if let Some(contract) = contracts.remove("CZCE.MA") {
         engine.add_strategy(
             SymbolType::from("MA505"),
             Box::new(Aberration::new(300)),
-            PerformanceTracker::new(1e6, 1e-4, contract),
+            PerformanceTracker::new(1e6, contract),
         );
     }
 
