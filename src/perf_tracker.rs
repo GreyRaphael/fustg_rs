@@ -22,21 +22,28 @@ impl PerformanceTracker {
         }
     }
 
-    fn charge(&mut self) -> f64 {
-        1e-4
-    }
-
     pub fn on_fill(&mut self, order: &Order, tick: &TickData) {
-        match (order.direction, order.offset) {
+        let fee = match (order.direction, order.offset) {
             (DirectionType::BUY, OffsetFlagType::OPEN) => {
-                let fee = tick.ap1 * self.contract_info.multiplier * self.contract_info.open_fee_rate + self.contract_info.open_fee_fixed;
+                // 以卖一价格为成交价格
+                tick.ap1 * self.contract_info.multiplier * self.contract_info.open_fee_rate * (tick.volume as f64) + self.contract_info.open_fee_fixed
             }
-            (DirectionType::SELL, OffsetFlagType::CLOSE) => {}
+            (DirectionType::SELL, OffsetFlagType::CLOSE) => {
+                // 为了计算方便，以平昨的费率+买一价格计算
+                tick.bp1 * self.contract_info.multiplier * self.contract_info.close_fee_rate * (tick.volume as f64)
+                    + self.contract_info.close_fee_fixed
+            }
             (DirectionType::SELL, OffsetFlagType::OPEN) => {
-                let fee = tick.bp1 * self.contract_info.multiplier * self.contract_info.open_fee_rate + self.contract_info.open_fee_fixed;
+                // 以买一价格为成交价格
+                tick.bp1 * self.contract_info.multiplier * self.contract_info.open_fee_rate * (tick.volume as f64) + self.contract_info.open_fee_fixed
             }
-            (DirectionType::BUY, OffsetFlagType::CLOSE) => {}
-        }
+            (DirectionType::BUY, OffsetFlagType::CLOSE) => {
+                // 为了计算方便，以平昨的费率+卖一计算
+                tick.ap1 * self.contract_info.multiplier * self.contract_info.close_fee_rate * (tick.volume as f64)
+                    + self.contract_info.close_fee_fixed
+            }
+        };
+        self.cash -= fee;
         self.orders.push(order.clone());
     }
 

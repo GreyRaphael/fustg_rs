@@ -36,7 +36,7 @@ impl Strategy for Aberration {
             if tick.last > ma + 2.0 * stdev {
                 self.position = 1;
                 return Some(Order {
-                    stg_name: self.name,
+                    stg_name: self.name(),
                     symbol: tick.symbol,
                     timestamp: tick.stamp,
                     volume: 1,
@@ -48,7 +48,7 @@ impl Strategy for Aberration {
             if tick.last < ma - 2.0 * stdev {
                 self.position = -1;
                 return Some(Order {
-                    stg_name: self.name,
+                    stg_name: self.name(),
                     symbol: tick.symbol,
                     timestamp: tick.stamp,
                     volume: 1,
@@ -62,7 +62,7 @@ impl Strategy for Aberration {
             if tick.last < ma {
                 self.position = 0;
                 return Some(Order {
-                    stg_name: self.name,
+                    stg_name: self.name(),
                     symbol: tick.symbol,
                     timestamp: tick.stamp,
                     volume: 1,
@@ -76,7 +76,7 @@ impl Strategy for Aberration {
             if tick.last > ma {
                 self.position = 0;
                 return Some(Order {
-                    stg_name: self.name,
+                    stg_name: self.name(),
                     symbol: tick.symbol,
                     timestamp: tick.stamp,
                     volume: 1,
