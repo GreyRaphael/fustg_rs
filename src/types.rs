@@ -138,7 +138,7 @@ pub struct Order {
     pub stg_name: NameType,       // NameType stg_name;
     pub symbol: SymbolType,       // SymbolType symbol;
     pub timestamp: i64,           // int64_t timestamp;
-    pub volume: u32,              // uint32_t volume;
+    pub lots: u32,              // uint32_t lots;
     pub direction: DirectionType, // DirectionType direction;
     pub offset: OffsetFlagType,   // OffsetFlagType offset;
 }

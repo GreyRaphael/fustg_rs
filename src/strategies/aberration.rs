@@ -39,7 +39,7 @@ impl Strategy for Aberration {
                     stg_name: self.name(),
                     symbol: tick.symbol,
                     timestamp: tick.stamp,
-                    volume: 1,
+                    lots: 1,
                     direction: DirectionType::BUY,
                     offset: OffsetFlagType::OPEN,
                 });
@@ -51,7 +51,7 @@ impl Strategy for Aberration {
                     stg_name: self.name(),
                     symbol: tick.symbol,
                     timestamp: tick.stamp,
-                    volume: 1,
+                    lots: 1,
                     direction: DirectionType::SELL,
                     offset: OffsetFlagType::OPEN,
                 });
@@ -65,7 +65,7 @@ impl Strategy for Aberration {
                     stg_name: self.name(),
                     symbol: tick.symbol,
                     timestamp: tick.stamp,
-                    volume: 1,
+                    lots: 1,
                     direction: DirectionType::SELL,
                     offset: OffsetFlagType::CLOSE,
                 });
@@ -79,7 +79,7 @@ impl Strategy for Aberration {
                     stg_name: self.name(),
                     symbol: tick.symbol,
                     timestamp: tick.stamp,
-                    volume: 1,
+                    lots: 1,
                     direction: DirectionType::BUY,
                     offset: OffsetFlagType::CLOSE,
                 });
