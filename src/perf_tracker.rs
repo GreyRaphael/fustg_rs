@@ -69,7 +69,6 @@ impl Position {
 }
 
 pub struct PerformanceTracker {
-    init_cash: f64,
     info: ContractInfo,
     available_cash: f64,
     long_position: Option<Position>,
@@ -83,7 +82,6 @@ pub struct PerformanceTracker {
 impl PerformanceTracker {
     pub fn new(init_cash: f64, info: ContractInfo) -> Self {
         Self {
-            init_cash,
             info,
             available_cash: init_cash,
             long_position: None,
