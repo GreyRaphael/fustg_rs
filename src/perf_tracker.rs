@@ -93,16 +93,14 @@ impl PerformanceTracker {
         }
     }
 
-    pub fn on_fill(&mut self, order: &Order, tick: &TickData) {
-        let (price, margin_rate, margin_fixed, pos_opt_slot) = match order.direction {
+    pub fn on_fill(&mut self, order: &Order) {
+        let (margin_rate, margin_fixed, pos_opt_slot) = match order.direction {
             DirectionType::BUY => (
-                tick.ap1,                    // 卖一价成交
                 self.info.long_margin_rate,  // 多头开仓保证金(按金额)
                 self.info.long_margin_fixed, // 多头开仓保证金(按手数)
                 &mut self.long_position,     // 多头持仓
             ),
             DirectionType::SELL => (
-                tick.bp1,                     // 买一价成交
                 self.info.short_margin_rate,  // 空头开仓保证金(按金额)
                 self.info.short_margin_fixed, // 空头开仓保证金(按手数)
                 &mut self.short_position,     // 空头持仓
@@ -122,7 +120,7 @@ impl PerformanceTracker {
         };
 
         // 1) 计算手续费
-        let value_per_lot = price * self.info.multiplier;
+        let value_per_lot = order.price * self.info.multiplier;
         let fee = (fee_rate * value_per_lot + fee_fixed) * (order.lots as f64);
         self.total_fee += fee;
         self.available_cash -= fee;
@@ -131,9 +129,9 @@ impl PerformanceTracker {
         match order.offset {
             OffsetFlagType::OPEN => {
                 // 新增/累加持仓
-                let pos = pos_opt_slot.get_or_insert_with(|| Position::new(0, price, margin_rate, margin_fixed, self.info.multiplier));
+                let pos = pos_opt_slot.get_or_insert_with(|| Position::new(0, order.price, margin_rate, margin_fixed, self.info.multiplier));
                 // 如果已有仓位，重新计算加权均价和保证金
-                let prev_margin = pos.increase(order.lots, price, margin_rate, margin_fixed, self.info.multiplier);
+                let prev_margin = pos.increase(order.lots, order.price, margin_rate, margin_fixed, self.info.multiplier);
                 // 冻结保证金
                 self.available_cash -= pos.margin - prev_margin; // 增量冻结
             }
@@ -141,11 +139,11 @@ impl PerformanceTracker {
                 if let Some(pos) = pos_opt_slot {
                     // 已经实现的pnl
                     let closed_lots = order.lots.min(pos.lots);
-                    let realized_pnl = pos.realized_pnl(closed_lots, price, self.info.multiplier, order.direction);
+                    let realized_pnl = pos.realized_pnl(closed_lots, order.price, self.info.multiplier, order.direction);
                     self.available_cash += realized_pnl;
                     self.total_realized_pnl += realized_pnl;
                     // 释放对应保证金
-                    let released_margin = pos.decrease(closed_lots, price, margin_rate, margin_fixed, self.info.multiplier);
+                    let released_margin = pos.decrease(closed_lots, order.price, margin_rate, margin_fixed, self.info.multiplier);
                     self.available_cash += released_margin;
                     // 清理仓位
                     if pos.lots == 0 {

@@ -106,7 +106,7 @@ impl CtaEngine {
                                     eprintln!("Error sending on PUSH socket: {:?}", e);
                                 }
 
-                                strat_perf.perf.on_fill(&order, &tick);
+                                strat_perf.perf.on_fill(&order);
                             }
                             strat_perf.perf.on_tick_end(&tick);
                         }
