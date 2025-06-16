@@ -32,32 +32,7 @@ impl Strategy for Aberration {
         let ma = self.ma.update(tick.last);
         let stdev = self.stdev.update(tick.last);
 
-        if self.position == 0 {
-            if tick.last > ma + 2.0 * stdev {
-                self.position = 1;
-                return Some(Order {
-                    stg_name: self.name(),
-                    symbol: tick.symbol,
-                    timestamp: tick.stamp,
-                    lots: 1,
-                    direction: DirectionType::BUY,
-                    offset: OffsetFlagType::OPEN,
-                });
-            }
-
-            if tick.last < ma - 2.0 * stdev {
-                self.position = -1;
-                return Some(Order {
-                    stg_name: self.name(),
-                    symbol: tick.symbol,
-                    timestamp: tick.stamp,
-                    lots: 1,
-                    direction: DirectionType::SELL,
-                    offset: OffsetFlagType::OPEN,
-                });
-            }
-        }
-
+        // 先平仓, 再开仓
         if self.position > 0 {
             if tick.last < ma {
                 self.position = 0;
@@ -82,6 +57,32 @@ impl Strategy for Aberration {
                     lots: 1,
                     direction: DirectionType::BUY,
                     offset: OffsetFlagType::CLOSE,
+                });
+            }
+        }
+
+        if self.position == 0 {
+            if tick.last > ma + 2.0 * stdev {
+                self.position = 1;
+                return Some(Order {
+                    stg_name: self.name(),
+                    symbol: tick.symbol,
+                    timestamp: tick.stamp,
+                    lots: 1,
+                    direction: DirectionType::BUY,
+                    offset: OffsetFlagType::OPEN,
+                });
+            }
+
+            if tick.last < ma - 2.0 * stdev {
+                self.position = -1;
+                return Some(Order {
+                    stg_name: self.name(),
+                    symbol: tick.symbol,
+                    timestamp: tick.stamp,
+                    lots: 1,
+                    direction: DirectionType::SELL,
+                    offset: OffsetFlagType::OPEN,
                 });
             }
         }
