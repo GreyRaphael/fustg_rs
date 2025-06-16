@@ -2,7 +2,6 @@ use crate::{
     config::ContractInfo,
     types::{DirectionType, OffsetFlagType, Order, TickData},
 };
-use std::collections::HashMap;
 
 /// 单向持仓
 #[derive(Debug, Clone)]
@@ -49,12 +48,13 @@ pub struct PerformanceTracker {
     init_cash: f64,
     available_cash: f64,
     /// 所有方向的持仓
-    positions: HashMap<DirectionType, Position>,
+    long_position: Option<Position>,
+    short_position: Option<Position>,
     contract_info: ContractInfo,
 
     /// 以下字段可以每次 on_tick_end 里重新计算
     frozen_cash: f64,
-    market_value: f64,
+    market_values: Vec<f64>,
     total_fee: f64,
     orders: Vec<Order>,
 }
@@ -64,11 +64,12 @@ impl PerformanceTracker {
         Self {
             init_cash,
             available_cash: init_cash,
-            positions: HashMap::new(),
+            long_position: None,
+            short_position: None,
             contract_info,
 
             frozen_cash: 0.0,
-            market_value: init_cash,
+            market_values: vec![init_cash],
             total_fee: 0.0,
             orders: Vec::new(),
         }
@@ -99,26 +100,30 @@ impl PerformanceTracker {
             DirectionType::SELL => (self.contract_info.short_margin_rate, self.contract_info.short_margin_fixed),
         };
 
+        let slot = match order.direction {
+            DirectionType::BUY => &mut self.long_position,
+            DirectionType::SELL => &mut self.short_position,
+        };
+
         // 2) 更新持仓和保证金
         match order.offset {
             OffsetFlagType::OPEN => {
                 // 新增/累加持仓
-                let pos = self
-                    .positions
-                    .entry(order.direction)
-                    .or_insert_with(|| Position::new(0, price, margin_rate, margin_fixed, self.contract_info.multiplier));
+
+                let pos = slot.get_or_insert_with(|| Position::new(0, price, margin_rate, margin_fixed, self.contract_info.multiplier));
+
                 // 如果已有仓位，重新计算加权均价和保证金
                 let total_lots = pos.lots + order.lots;
                 let new_avg = (pos.avg_price * pos.lots as f64 + price * order.lots as f64) / total_lots as f64;
                 pos.avg_price = new_avg;
-                pos.lots += order.lots;
+                pos.lots = total_lots;
 
                 pos.margin = (margin_rate * pos.avg_price * self.contract_info.multiplier + margin_fixed) * (pos.lots as f64);
                 // 冻结保证金
-                self.available_cash -= pos.margin - (self.frozen_cash); // 增量冻结
+                self.available_cash -= pos.margin - self.frozen_cash; // 增量冻结
             }
             OffsetFlagType::CLOSE => {
-                if let Some(pos) = self.positions.get_mut(&order.direction) {
+                if let Some(pos) = slot {
                     // 释放对应保证金
                     let released_margin = pos.reduce(order.lots, price, margin_rate, margin_fixed, self.contract_info.multiplier);
                     self.available_cash += released_margin;
@@ -134,15 +139,16 @@ impl PerformanceTracker {
         let mut total_unreal = 0.0;
         let mut total_margin = 0.0;
 
-        for (&direction, pos) in &self.positions {
-            if pos.lots == 0 {
-                continue;
-            }
-            total_unreal += pos.unrealized_pnl(tick.last, self.contract_info.multiplier, direction);
+        if let Some(pos) = &self.long_position {
+            total_unreal += pos.unrealized_pnl(tick.last, self.contract_info.multiplier, DirectionType::BUY);
+            total_margin += pos.margin;
+        }
+        if let Some(pos) = &self.short_position {
+            total_unreal += pos.unrealized_pnl(tick.last, self.contract_info.multiplier, DirectionType::SELL);
             total_margin += pos.margin;
         }
 
         self.frozen_cash = total_margin;
-        self.market_value = self.available_cash + total_unreal + total_margin;
+        self.market_values.push(self.available_cash + total_unreal + total_margin);
     }
 }
